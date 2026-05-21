@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --terminal-black: #000000;
+  --terminal-green: #00FF41;
+}
+
+* {
+  box-sizing: border-box;
+  border-radius: 0 !important;
+}
+
+html,
+body {
+  min-height: 100%;
+  background: var(--terminal-black);
+  color: var(--terminal-green);
+}
+
+body {
+  margin: 0;
+  font-family: "Courier New", "Fira Code", ui-monospace, monospace;
+}
+
+::selection {
+  background: var(--terminal-green);
+  color: var(--terminal-black);
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--terminal-black);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--terminal-green);
+  border: 2px solid var(--terminal-black);
+}
+
+input,
+textarea,
+button {
+  font: inherit;
+}
+
+input,
+textarea {
+  background: var(--terminal-black);
+  color: var(--terminal-green);
+  border: 1px solid var(--terminal-green);
+  outline: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(0, 255, 65, 0.65);
+}
+
+input:focus,
+textarea:focus {
+  box-shadow: 0 0 0 1px var(--terminal-green);
+}
+
+button,
+label[role="button"] {
+  border: 1px solid var(--terminal-green);
+  background: var(--terminal-black);
+  color: var(--terminal-green);
+  transition:
+    background-color 120ms linear,
+    color 120ms linear;
+}
+
+button:hover:not(:disabled),
+label[role="button"]:hover {
+  background: var(--terminal-green);
+  color: var(--terminal-black);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+a {
+  color: inherit;
+}

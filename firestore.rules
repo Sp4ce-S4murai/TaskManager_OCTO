@@ -1,0 +1,49 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isString(value) {
+      return value is string;
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == request.auth.token.email;
+    }
+
+    match /tasks/{taskId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && isString(request.resource.data.title)
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 140
+        && isString(request.resource.data.description)
+        && request.resource.data.description.size() <= 600
+        && request.resource.data.status == "todo"
+        && request.resource.data.authorEmail == request.auth.token.email
+        && request.resource.data.timestamp == request.time;
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status"])
+        && request.resource.data.status in ["todo", "done"];
+      allow delete: if signedIn();
+
+      match /comments/{commentId} {
+        allow read: if signedIn();
+        allow create: if signedIn()
+          && isString(request.resource.data.text)
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 500
+          && request.resource.data.authorEmail == request.auth.token.email
+          && request.resource.data.timestamp == request.time;
+        allow delete: if signedIn();
+      }
+    }
+  }
+}
