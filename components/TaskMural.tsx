@@ -17,7 +17,7 @@ function mapTaskDocument(document: QueryDocumentSnapshot): Task {
     title: String(data.title ?? ""),
     description: String(data.description ?? ""),
     status: data.status === "done" ? "done" : "todo",
-    authorEmail: String(data.authorEmail ?? "unknown"),
+    authorEmail: String(data.authorEmail ?? "desconhecido"),
     imageUrl: typeof data.imageUrl === "string" ? data.imageUrl : undefined,
     timestamp: data.timestamp ?? null
   };
@@ -51,15 +51,15 @@ export default function TaskMural({ user }: { user: User }) {
       
       <TaskForm user={user} />
 
-      <div className="mb-4 mt-6 flex items-center justify-between border-y border-terminal-green py-2 text-sm uppercase">
-        <span>&gt; mural stream</span>
-        <span>{tasks.length} tasks</span>
+      <div className="mb-4 mt-6 flex items-center justify-between border-y border-terminal-cyan py-2 text-sm uppercase text-terminal-cyan shadow-[0_0_10px_rgba(0,255,255,0.05)]">
+        <span>&gt; fluxo do mural</span>
+        <span className="text-terminal-magenta font-bold">{tasks.length} tarefas</span>
       </div>
 
-      {loading ? <p className="border border-terminal-green p-4 uppercase">loading task feed...</p> : null}
-      {error ? <p className="border border-terminal-green p-4 uppercase">firestore error: {error}</p> : null}
+      {loading ? <p className="border border-terminal-yellow p-4 uppercase text-terminal-yellow">carregando feed de tarefas...</p> : null}
+      {error ? <p className="border border-terminal-red p-4 uppercase text-terminal-red">erro firestore: {error}</p> : null}
       {!loading && !error && tasks.length === 0 ? (
-        <p className="border border-terminal-green p-4 uppercase">no tasks found. create the first command.</p>
+        <p className="border border-terminal-yellow p-4 uppercase text-terminal-yellow">nenhuma tarefa encontrada. inicie o primeiro comando.</p>
       ) : null}
 
       <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">

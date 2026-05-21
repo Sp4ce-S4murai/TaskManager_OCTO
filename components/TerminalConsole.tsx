@@ -20,9 +20,9 @@ interface TerminalConsoleProps {
 export default function TerminalConsole({ user, tasks }: TerminalConsoleProps) {
   const [inputValue, setInputValue] = useState("");
   const [logs, setLogs] = useState<LogEntry[]>([
-    { type: "system", text: "OCTO TASK TERMINAL v1.4.0-RELEASE" },
-    { type: "system", text: `AUTHORIZED SESSION: ${user.email}` },
-    { type: "system", text: 'Type "help" to see available terminal commands.' },
+    { type: "system", text: "OCTO TASK TERMINAL v1.5.0-BR" },
+    { type: "system", text: `SESSÃO AUTORIZADA: ${user.email}` },
+    { type: "system", text: 'Digite "ajuda" para ver os comandos disponíveis do terminal.' },
     { type: "system", text: "--------------------------------------------------------" }
   ]);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
@@ -64,87 +64,92 @@ export default function TerminalConsole({ user, tasks }: TerminalConsoleProps) {
     setHistoryPointer(-1);
 
     // Print command input in logs
-    setLogs((prev) => [...prev, { type: "input", text: `octo@employee:~$ ${trimmed}` }]);
+    setLogs((prev) => [...prev, { type: "input", text: `octo@funcionario:~$ ${trimmed}` }]);
 
     const args = parseCommandArgs(trimmed);
     const commandName = args[0].toLowerCase();
 
     try {
       switch (commandName) {
-        case "help":
+        case "ajuda":
           setLogs((prev) => [
             ...prev,
-            { type: "output", text: "AVAILABLE TERMINAL COMMANDS:" },
-            { type: "output", text: '  add "title" ["desc"]  -> Create a new task (use quotes for spaces)' },
-            { type: "output", text: "  todo <index>          -> Mark task at <index> as TODO" },
-            { type: "output", text: "  done <index>          -> Mark task at <index> as DONE" },
-            { type: "output", text: "  delete <index>        -> Permanent removal of task" },
-            { type: "output", text: '  comment <index> "txt" -> Add a comment to task (use quotes)' },
-            { type: "output", text: "  clear                 -> Clear the console history logs" },
-            { type: "output", text: "  sysinfo               -> Display brutalist terminal host info" }
+            { type: "output", text: "COMANDOS DISPONÍVEIS NO TERMINAL:" },
+            { type: "output", text: '  add "título" ["desc"]  -> Criar uma nova tarefa (use aspas para espaços)' },
+            { type: "output", text: "  pendente <índice>      -> Marcar tarefa no <índice> como PENDENTE" },
+            { type: "output", text: "  feito <índice>         -> Marcar tarefa no <índice> como FEITO" },
+            { type: "output", text: "  rm <índice>            -> Remoção permanente da tarefa" },
+            { type: "output", text: '  msg <índice> "txt"     -> Adicionar um comentário (use aspas)' },
+            { type: "output", text: "  limpar                 -> Limpar o histórico do console" },
+            { type: "output", text: "  sistema                -> Exibir informações do host do terminal" }
           ]);
           break;
 
+        case "limpar":
         case "clear":
           setLogs([]);
           break;
 
+        case "sistema":
         case "sysinfo":
           setLogs((prev) => [
             ...prev,
-            { type: "system", text: "--- HOST SYSTEM SPECS ---" },
-            { type: "system", text: "OS: OCTO-Brutalist v2.0" },
+            { type: "system", text: "--- ESPECIFICAÇÕES DO SISTEMA HOST ---" },
+            { type: "system", text: "SO: OCTO-Brutalist v2.0" },
             { type: "system", text: "KERNEL: Monospace-NextJS 14.2" },
-            { type: "system", text: "DB SYNC: Cloud Firestore (Real-time WebSockets)" },
-            { type: "system", text: `EMPLOYEE: ${user.email}` },
-            { type: "system", text: `LOCAL TIME: ${new Date().toLocaleTimeString()}` },
-            { type: "system", text: "SYSTEM STATUS: SECURE & STABLE" }
+            { type: "system", text: "DB SYNC: Cloud Firestore (WebSockets em Tempo Real)" },
+            { type: "system", text: `FUNCIONÁRIO: ${user.email}` },
+            { type: "system", text: `HORA LOCAL: ${new Date().toLocaleTimeString('pt-BR')}` },
+            { type: "system", text: "STATUS DO SISTEMA: SEGURO & ESTÁVEL" }
           ]);
           break;
 
         case "add":
-        case "create": {
+        case "criar": {
           if (args.length < 2) {
-            setLogs((prev) => [...prev, { type: "error", text: 'Syntax Error: add "title" ["description"]' }]);
+            setLogs((prev) => [...prev, { type: "error", text: 'Erro de Sintaxe: add "título" ["descrição"]' }]);
             break;
           }
           const title = args[1];
           const description = args[2] || "";
 
           if (title.length > 140) {
-            setLogs((prev) => [...prev, { type: "error", text: "Constraint Error: Title exceeds 140 chars" }]);
+            setLogs((prev) => [...prev, { type: "error", text: "Erro de Restrição: Título excede 140 caracteres" }]);
             break;
           }
           if (description.length > 600) {
-            setLogs((prev) => [...prev, { type: "error", text: "Constraint Error: Description exceeds 600 chars" }]);
+            setLogs((prev) => [...prev, { type: "error", text: "Erro de Restrição: Descrição excede 600 caracteres" }]);
             break;
           }
 
-          setLogs((prev) => [...prev, { type: "output", text: "Uploading task to mainframe..." }]);
+          setLogs((prev) => [...prev, { type: "output", text: "Enviando tarefa para o mainframe..." }]);
           
           await addDoc(collection(db, "tasks"), {
             title: title.trim(),
             description: description.trim(),
             status: "todo",
-            authorEmail: user.email ?? "unknown",
+            authorEmail: user.email ?? "desconhecido",
             imageUrl: null,
             timestamp: serverTimestamp()
           });
 
-          setLogs((prev) => [...prev, { type: "output", text: `SUCCESS: Task "${title}" created successfully.` }]);
+          setLogs((prev) => [...prev, { type: "output", text: `SUCESSO: Tarefa "${title}" criada com sucesso.` }]);
           break;
         }
 
+        case "pendente":
         case "todo":
-        case "reopen":
+        case "reabrir":
+        case "feito":
         case "done":
-        case "complete":
+        case "concluir":
+        case "remover":
         case "delete":
         case "rm":
-        case "comment":
+        case "comentar":
         case "msg": {
           if (args.length < 2) {
-            setLogs((prev) => [...prev, { type: "error", text: `Syntax Error: command needs task index (e.g., "${commandName} 1")` }]);
+            setLogs((prev) => [...prev, { type: "error", text: `Erro de Sintaxe: comando requer o índice da tarefa (ex: "${commandName} 1")` }]);
             break;
           }
 
@@ -152,39 +157,39 @@ export default function TerminalConsole({ user, tasks }: TerminalConsoleProps) {
           if (isNaN(index) || index < 1 || index > tasks.length) {
             setLogs((prev) => [
               ...prev,
-              { type: "error", text: `Index Error: Task index #${args[1]} is invalid. Active range: 1 to ${tasks.length}` }
+              { type: "error", text: `Erro de Índice: O índice de tarefa #${args[1]} é inválido. Intervalo ativo: 1 até ${tasks.length}` }
             ]);
             break;
           }
 
           const targetTask = tasks[index - 1]; // Tasks are 0-indexed in state but 1-indexed in CLI
 
-          if (commandName === "done" || commandName === "complete") {
+          if (commandName === "feito" || commandName === "done" || commandName === "concluir") {
             await updateDoc(doc(db, "tasks", targetTask.id), { status: "done" });
-            setLogs((prev) => [...prev, { type: "output", text: `SUCCESS: Task #${index} ("${targetTask.title}") marked as DONE.` }]);
-          } else if (commandName === "todo" || commandName === "reopen") {
+            setLogs((prev) => [...prev, { type: "output", text: `SUCESSO: Tarefa #${index} ("${targetTask.title}") marcada como FEITO.` }]);
+          } else if (commandName === "pendente" || commandName === "todo" || commandName === "reabrir") {
             await updateDoc(doc(db, "tasks", targetTask.id), { status: "todo" });
-            setLogs((prev) => [...prev, { type: "output", text: `SUCCESS: Task #${index} ("${targetTask.title}") marked as TODO.` }]);
-          } else if (commandName === "delete" || commandName === "rm") {
+            setLogs((prev) => [...prev, { type: "output", text: `SUCESSO: Tarefa #${index} ("${targetTask.title}") marcada como PENDENTE.` }]);
+          } else if (commandName === "remover" || commandName === "delete" || commandName === "rm") {
             await deleteDoc(doc(db, "tasks", targetTask.id));
-            setLogs((prev) => [...prev, { type: "output", text: `SUCCESS: Task #${index} ("${targetTask.title}") permanently DELETED.` }]);
-          } else if (commandName === "comment" || commandName === "msg") {
+            setLogs((prev) => [...prev, { type: "output", text: `SUCESSO: Tarefa #${index} ("${targetTask.title}") permanentemente REMOVIDA.` }]);
+          } else if (commandName === "comentar" || commandName === "msg") {
             if (args.length < 3) {
-              setLogs((prev) => [...prev, { type: "error", text: 'Syntax Error: comment <index> "comment text"' }]);
+              setLogs((prev) => [...prev, { type: "error", text: 'Erro de Sintaxe: msg <índice> "texto do comentário"' }]);
               break;
             }
             const textContent = args[2];
             if (textContent.length > 500) {
-              setLogs((prev) => [...prev, { type: "error", text: "Constraint Error: Comment exceeds 500 chars" }]);
+              setLogs((prev) => [...prev, { type: "error", text: "Erro de Restrição: Comentário excede 500 caracteres" }]);
               break;
             }
 
             await addDoc(collection(db, "tasks", targetTask.id, "comments"), {
               text: textContent.trim(),
-              authorEmail: user.email ?? "unknown",
+              authorEmail: user.email ?? "desconhecido",
               timestamp: serverTimestamp()
             });
-            setLogs((prev) => [...prev, { type: "output", text: `SUCCESS: Comment added to Task #${index}.` }]);
+            setLogs((prev) => [...prev, { type: "output", text: `SUCESSO: Comentário adicionado à Tarefa #${index}.` }]);
           }
           break;
         }
@@ -192,13 +197,13 @@ export default function TerminalConsole({ user, tasks }: TerminalConsoleProps) {
         default:
           setLogs((prev) => [
             ...prev,
-            { type: "error", text: `Command Not Found: "${commandName}". Type "help" for a list of valid mainframe directives.` }
+            { type: "error", text: `Comando Não Encontrado: "${commandName}". Digite "ajuda" para ver a lista de diretrizes válidas do mainframe.` }
           ]);
       }
     } catch (err) {
       setLogs((prev) => [
         ...prev,
-        { type: "error", text: `EXECUTION FAULT: ${err instanceof Error ? err.message : "Database connection issue"}` }
+        { type: "error", text: `FALHA DE EXECUÇÃO: ${err instanceof Error ? err.message : "Problema de conexão com banco de dados"}` }
       ]);
     }
   };
@@ -232,29 +237,29 @@ export default function TerminalConsole({ user, tasks }: TerminalConsoleProps) {
   return (
     <div 
       onClick={focusInput}
-      className="relative mb-6 border border-terminal-green bg-terminal-black p-4 font-mono shadow-[0_0_15px_rgba(0,255,65,0.15)] cursor-text select-none group"
+      className="relative mb-6 border border-terminal-cyan bg-terminal-black p-4 font-mono shadow-[0_0_20px_rgba(0,255,255,0.15)] cursor-text select-none group"
     >
       {/* Visual CRT Scanline Filter effect for Brutalist WOW factor */}
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,3px_100%] opacity-20"></div>
 
-      <div className="mb-2 flex items-center justify-between border-b border-terminal-green/30 pb-2 text-xs uppercase text-terminal-green/60">
+      <div className="mb-2 flex items-center justify-between border-b border-terminal-cyan/30 pb-2 text-xs uppercase text-terminal-cyan">
         <span className="flex items-center gap-1.5 font-bold">
-          <Terminal className="h-3.5 w-3.5 animate-pulse text-terminal-green" />
-          OCTO COMMAND CONSOLE
+          <Terminal className="h-3.5 w-3.5 animate-pulse text-terminal-magenta" />
+          CONSOLE DE COMANDOS OCTO
         </span>
-        <span className="flex items-center gap-1">
+        <span className="flex items-center gap-1 text-terminal-cyan">
           <Cpu className="h-3 w-3" />
-          LINK STATE: ONLINE
+          ESTADO DO LINK: ONLINE
         </span>
       </div>
 
       {/* Terminal Logs */}
-      <div className="h-44 overflow-y-auto pr-1 text-sm space-y-1 mb-2">
+      <div className="h-44 overflow-y-auto pr-1 text-sm space-y-1 mb-2 relative z-10">
         {logs.map((log, index) => {
           let color = "text-terminal-green";
-          if (log.type === "error") color = "text-red-500 font-semibold";
-          if (log.type === "system") color = "text-yellow-500 opacity-90";
-          if (log.type === "input") color = "text-terminal-green/80";
+          if (log.type === "error") color = "text-terminal-red font-bold";
+          if (log.type === "system") color = "text-terminal-yellow font-bold opacity-90";
+          if (log.type === "input") color = "text-terminal-cyan font-bold";
 
           return (
             <div key={index} className={`${color} whitespace-pre-wrap leading-5`}>
@@ -266,12 +271,12 @@ export default function TerminalConsole({ user, tasks }: TerminalConsoleProps) {
       </div>
 
       {/* CLI Input line */}
-      <div className="flex items-center text-sm border-t border-terminal-green/20 pt-2">
-        <span className="text-terminal-green mr-2 shrink-0 select-none">octo@employee:~$</span>
+      <div className="flex items-center text-sm border-t border-terminal-cyan/20 pt-2 relative z-10">
+        <span className="text-terminal-magenta mr-2 shrink-0 select-none font-bold">octo@funcionario:~$</span>
         <input
           ref={inputRef}
           type="text"
-          className="flex-1 bg-transparent border-0 outline-none p-0 m-0 text-terminal-green focus:ring-0 w-full selection:bg-terminal-green selection:text-terminal-black"
+          className="flex-1 bg-transparent border-0 outline-none p-0 m-0 text-terminal-green font-bold focus:ring-0 w-full selection:bg-terminal-cyan selection:text-terminal-black"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -280,7 +285,7 @@ export default function TerminalConsole({ user, tasks }: TerminalConsoleProps) {
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck="false"
-          placeholder="type your directive..."
+          placeholder="digite sua diretriz..."
         />
       </div>
     </div>

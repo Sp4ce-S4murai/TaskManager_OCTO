@@ -11,7 +11,12 @@ const config: Config = {
       colors: {
         terminal: {
           black: "#000000",
-          green: "#00FF41"
+          green: "#00FF41",
+          cyan: "#00FFFF",
+          yellow: "#FFFF00",
+          magenta: "#FF00FF",
+          red: "#FF003C",
+          gray: "#333333"
         }
       },
       fontFamily: {

@@ -6,6 +6,11 @@
   color-scheme: dark;
   --terminal-black: #000000;
   --terminal-green: #00FF41;
+  --terminal-cyan: #00FFFF;
+  --terminal-yellow: #FFFF00;
+  --terminal-magenta: #FF00FF;
+  --terminal-red: #FF003C;
+  --terminal-gray: #333333;
 }
 
 * {
