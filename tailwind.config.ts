@@ -6,6 +6,10 @@ const config: Config = {
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./lib/**/*.{js,ts,jsx,tsx,mdx}"
   ],
+  safelist: [
+    { pattern: /(bg|text|border)-terminal-(green|cyan|yellow|magenta|red|black|gray)/ },
+    { pattern: /hover:(bg|text|border)-terminal-(green|cyan|yellow|magenta|red|black|gray)/ }
+  ],
   theme: {
     extend: {
       colors: {

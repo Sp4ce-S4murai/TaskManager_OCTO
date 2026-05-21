@@ -19,27 +19,31 @@ export default function CardAnimations({ type, className = "" }: CardAnimationsP
 
     let animationFrameId: number;
 
-    const resize = () => {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
+    const checkResize = () => {
+      if (canvas.width !== canvas.offsetWidth || canvas.height !== canvas.offsetHeight) {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+      }
     };
-    window.addEventListener("resize", resize);
-    resize();
+    window.addEventListener("resize", checkResize);
+    checkResize();
 
     // 1. Matrix
     if (type === "matrix") {
       const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*";
       const fontSize = 14;
-      const columns = canvas.width / fontSize;
+      const columns = 200; // max expected width
       const drops: number[] = Array.from({ length: columns }).fill(1) as number[];
 
       const draw = () => {
+        checkResize();
         ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#00FF41";
         ctx.font = fontSize + "px monospace";
 
-        for (let i = 0; i < drops.length; i++) {
+        const currentColumns = Math.ceil(canvas.width / fontSize);
+        for (let i = 0; i < currentColumns; i++) {
           const text = letters[Math.floor(Math.random() * letters.length)];
           ctx.fillText(text, i * fontSize, drops[i] * fontSize);
           if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
@@ -58,8 +62,8 @@ export default function CardAnimations({ type, className = "" }: CardAnimationsP
       const particles: any[] = [];
       for(let i = 0; i < 20; i++) {
         particles.push({
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
+          x: Math.random() * 2000,
+          y: Math.random() * 2000,
           char: runes[Math.floor(Math.random() * runes.length)],
           speed: 0.2 + Math.random() * 0.5,
           opacity: Math.random() * 0.5 + 0.1
@@ -67,11 +71,12 @@ export default function CardAnimations({ type, className = "" }: CardAnimationsP
       }
       
       const draw = () => {
+        checkResize();
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.font = "20px monospace";
         particles.forEach(p => {
           ctx.fillStyle = `rgba(0, 255, 65, ${p.opacity})`;
-          ctx.fillText(p.char, p.x, p.y);
+          ctx.fillText(p.char, p.x % canvas.width, p.y);
           p.y -= p.speed;
           if (p.y < -20) {
             p.y = canvas.height + 20;
@@ -86,6 +91,7 @@ export default function CardAnimations({ type, className = "" }: CardAnimationsP
     // 3. Glitch
     else if (type === "glitch") {
       const draw = () => {
+        checkResize();
         ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         for(let i=0; i<5; i++) {
@@ -101,6 +107,7 @@ export default function CardAnimations({ type, className = "" }: CardAnimationsP
     else if (type === "grid") {
       let offset = 0;
       const draw = () => {
+        checkResize();
         ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.strokeStyle = "rgba(0, 255, 65, 0.3)";
@@ -125,17 +132,18 @@ export default function CardAnimations({ type, className = "" }: CardAnimationsP
     // 5. Starfield
     else if (type === "starfield") {
       const stars = Array.from({length: 100}).map(() => ({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
+        x: Math.random() * 2000,
+        y: Math.random() * 2000,
         z: Math.random() * 2
       }));
       
       const draw = () => {
+        checkResize();
         ctx.fillStyle = "rgba(0,0,0,0.3)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "rgba(255,255,255,0.8)";
         stars.forEach(s => {
-          ctx.fillRect(s.x, s.y, s.z, s.z);
+          ctx.fillRect(s.x % canvas.width, s.y, s.z, s.z);
           s.y += s.z * 0.5;
           if(s.y > canvas.height) { s.y = 0; s.x = Math.random() * canvas.width; }
         });
@@ -158,6 +166,7 @@ export default function CardAnimations({ type, className = "" }: CardAnimationsP
       };
       
       const draw = () => {
+        checkResize();
         ctx.fillStyle = "rgba(0,0,0,0.1)";
         ctx.fillRect(0,0,canvas.width, canvas.height);
         ctx.strokeStyle = `rgba(0, 255, 65, ${0.1 + Math.sin(time)*0.05})`;
@@ -178,14 +187,16 @@ export default function CardAnimations({ type, className = "" }: CardAnimationsP
     // 7. Binary
     else if (type === "binary") {
       const fontSize = 12;
-      const columns = canvas.width / fontSize;
+      const columns = 200;
       const drops: number[] = Array.from({ length: columns }).fill(1) as number[];
       const draw = () => {
+        checkResize();
         ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "rgba(0, 255, 65, 0.5)";
         ctx.font = fontSize + "px monospace";
-        for (let i = 0; i < drops.length; i++) {
+        const currentColumns = Math.ceil(canvas.width / fontSize);
+        for (let i = 0; i < currentColumns; i++) {
           const text = Math.random() > 0.5 ? "0" : "1";
           ctx.fillText(text, i * fontSize, drops[i] * fontSize);
           if (drops[i] * fontSize > canvas.height && Math.random() > 0.95) drops[i] = 0;
@@ -200,6 +211,7 @@ export default function CardAnimations({ type, className = "" }: CardAnimationsP
     else if (type === "radar") {
       let angle = 0;
       const draw = () => {
+        checkResize();
         const cx = canvas.width/2;
         const cy = canvas.height/2;
         const r = Math.min(cx, cy) * 0.8;
@@ -228,6 +240,7 @@ export default function CardAnimations({ type, className = "" }: CardAnimationsP
     else if (type === "nebula") {
       let time = 0;
       const draw = () => {
+        checkResize();
         ctx.clearRect(0,0,canvas.width, canvas.height);
         const gradient = ctx.createRadialGradient(
           canvas.width/2 + Math.sin(time)*50, canvas.height/2 + Math.cos(time*0.8)*50, 0,
@@ -247,6 +260,7 @@ export default function CardAnimations({ type, className = "" }: CardAnimationsP
     else if (type === "plasma") {
       let time = 0;
       const draw = () => {
+        checkResize();
         ctx.clearRect(0,0,canvas.width, canvas.height);
         for(let x=0; x<canvas.width; x+=20) {
           for(let y=0; y<canvas.height; y+=20) {

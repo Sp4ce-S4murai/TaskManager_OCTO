@@ -25,6 +25,7 @@ export default function ProfileHeader({ profileUid, isCurrentUser }: ProfileHead
   const [cardAnimation, setCardAnimation] = useState("none");
   const [availableAvatars, setAvailableAvatars] = useState<string[]>([]);
   const [avatarsFetched, setAvatarsFetched] = useState(false);
+  const [showGallery, setShowGallery] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const animations = ["none", "matrix", "runes", "glitch", "grid", "starfield", "hexagons", "binary", "radar", "nebula", "plasma"];
@@ -107,29 +108,50 @@ export default function ProfileHeader({ profileUid, isCurrentUser }: ProfileHead
           
           {/* Avatar Section */}
           <div className="flex flex-col items-center gap-3 shrink-0">
-            <div className="relative w-32 h-32 border border-terminal-green bg-terminal-black/50 overflow-hidden flex items-center justify-center">
+            <button 
+              type="button"
+              onClick={() => editing && setShowGallery(!showGallery)}
+              className={`relative w-32 h-32 border border-terminal-green bg-terminal-black/50 overflow-hidden flex items-center justify-center ${editing ? 'cursor-pointer hover:border-white' : 'cursor-default'}`}
+            >
               {displayAvatar ? (
                 <Image 
                   src={`/avatars/${displayAvatar}`} 
                   alt="Avatar" 
                   fill 
-                  className="object-cover aspect-square grayscale hover:grayscale-0 transition-all duration-300"
+                  className={`object-cover aspect-square transition-all duration-300 ${editing ? 'grayscale-0' : 'grayscale hover:grayscale-0'}`}
                   sizes="128px"
                 />
               ) : (
                 <UserCircle className="w-16 h-16 text-terminal-green opacity-50" />
               )}
-            </div>
+              {editing && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                  <span className="text-white text-xs uppercase font-bold bg-black/60 px-2 py-1">trocar foto</span>
+                </div>
+              )}
+            </button>
             
-            {editing && availableAvatars.length > 0 && (
-              <div className="flex items-center gap-2 text-terminal-green">
-                <button type="button" onClick={prevAvatar} className="border border-terminal-green hover:bg-terminal-green hover:text-terminal-black p-1">
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <span className="text-xs uppercase w-20 text-center truncate">{avatar || "none"}</span>
-                <button type="button" onClick={nextAvatar} className="border border-terminal-green hover:bg-terminal-green hover:text-terminal-black p-1">
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+            {editing && showGallery && availableAvatars.length > 0 && (
+              <div className="absolute top-40 left-6 z-50 bg-terminal-black border border-terminal-green p-4 shadow-[0_0_20px_rgba(0,255,65,0.2)] w-64">
+                <div className="flex justify-between items-center mb-3 border-b border-terminal-green/30 pb-2">
+                  <span className="text-xs font-bold uppercase text-terminal-green">Galeria Neural</span>
+                  <button type="button" onClick={() => setShowGallery(false)} className="text-terminal-red hover:text-white text-xs">fechar</button>
+                </div>
+                <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
+                  {availableAvatars.map(av => (
+                    <button
+                      key={av}
+                      type="button"
+                      onClick={() => {
+                        setAvatar(av);
+                        setShowGallery(false);
+                      }}
+                      className={`relative aspect-square border ${avatar === av ? 'border-white scale-105' : 'border-terminal-green/50 hover:border-terminal-green'} transition-all`}
+                    >
+                      <Image src={`/avatars/${av}`} alt={av} fill className="object-cover" sizes="64px" />
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
