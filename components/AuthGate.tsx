@@ -88,8 +88,8 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   if (!user) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-terminal-black p-6 text-terminal-green">
-        <section className="w-full max-w-md border border-terminal-cyan p-5 shadow-[0_0_15px_rgba(0,255,255,0.1)]">
-          <div className="mb-6 flex items-center gap-3 border-b border-terminal-cyan pb-4 text-terminal-cyan">
+        <section className="w-full max-w-md border border-terminal-green p-5 shadow-[0_0_15px_rgba(0,255,255,0.1)]">
+          <div className="mb-6 flex items-center gap-3 border-b border-terminal-green pb-4 text-terminal-green">
             <Terminal aria-hidden className="h-6 w-6" />
             <div>
               <h1 className="text-xl font-bold uppercase tracking-normal">OCTO TASK TERMINAL</h1>
@@ -99,9 +99,9 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <label className="block">
-              <span className="mb-2 block text-sm uppercase text-terminal-cyan">&gt; email</span>
+              <span className="mb-2 block text-sm uppercase text-terminal-green">&gt; email</span>
               <input
-                className="w-full px-3 py-3 border-terminal-cyan focus:ring-0 focus:border-terminal-cyan text-terminal-cyan bg-terminal-black"
+                className="w-full px-3 py-3 border-terminal-green focus:ring-0 focus:border-terminal-green text-terminal-green bg-terminal-black"
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
@@ -110,9 +110,9 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
               />
             </label>
             <label className="block">
-              <span className="mb-2 block text-sm uppercase text-terminal-cyan">&gt; senha</span>
+              <span className="mb-2 block text-sm uppercase text-terminal-green">&gt; senha</span>
               <input
-                className="w-full px-3 py-3 border-terminal-cyan focus:ring-0 focus:border-terminal-cyan text-terminal-cyan bg-terminal-black"
+                className="w-full px-3 py-3 border-terminal-green focus:ring-0 focus:border-terminal-green text-terminal-green bg-terminal-black"
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -121,7 +121,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
               />
             </label>
             {error ? <p className="border border-terminal-red text-terminal-red p-3 text-sm font-bold">ERRO DE AUTH: {error}</p> : null}
-            <button className="w-full border-terminal-cyan text-terminal-cyan hover:bg-terminal-cyan hover:text-terminal-black px-4 py-3 font-bold uppercase transition-colors" type="submit" disabled={submitting}>
+            <button className="w-full border-terminal-green text-terminal-green hover:bg-terminal-green hover:text-terminal-black px-4 py-3 font-bold uppercase transition-colors" type="submit" disabled={submitting}>
               {submitting ? "autenticando..." : "> entrar"}
             </button>
           </form>
@@ -133,21 +133,21 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{ user, logout: handleLogout }}>
       <main className="min-h-screen bg-terminal-black text-terminal-green">
-        <header className="sticky top-0 z-10 border-b border-terminal-cyan bg-terminal-black px-4 py-3 shadow-[0_4px_20px_rgba(0,255,255,0.05)]">
+        <header className="sticky top-0 z-10 border-b border-terminal-green bg-terminal-black px-4 py-3 shadow-[0_4px_20px_rgba(0,255,255,0.05)]">
           <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-terminal-cyan">
+            <div className="text-terminal-green">
               <Link href={`/`} className="text-2xl font-bold uppercase tracking-normal hover:underline">OCTO TASK TERMINAL</Link>
               <p className="text-sm uppercase text-terminal-yellow">sessão: {user.email}</p>
             </div>
             <div className="flex gap-2">
               <Link
                 href={`/perfil/${user.uid}`}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 uppercase border border-terminal-cyan text-terminal-cyan hover:bg-terminal-cyan hover:text-terminal-black transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 uppercase border border-terminal-green text-terminal-green hover:bg-terminal-green hover:text-terminal-black transition-colors"
               >
                 meu perfil
               </Link>
               <button
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 uppercase border border-terminal-magenta text-terminal-magenta hover:bg-terminal-magenta hover:text-terminal-black transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 uppercase border border-terminal-yellow text-terminal-yellow hover:bg-terminal-yellow hover:text-terminal-black transition-colors"
                 type="button"
                 onClick={() => void handleLogout()}
               >

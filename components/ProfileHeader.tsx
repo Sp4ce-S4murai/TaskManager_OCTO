@@ -22,8 +22,12 @@ export default function ProfileHeader({ profileUid, isCurrentUser }: ProfileHead
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [avatar, setAvatar] = useState("");
+  const [cardAnimation, setCardAnimation] = useState("none");
   const [availableAvatars, setAvailableAvatars] = useState<string[]>([]);
+  const [avatarsFetched, setAvatarsFetched] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const animations = ["none", "matrix", "runes", "glitch", "grid", "starfield", "hexagons", "binary", "radar", "nebula", "plasma"];
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "users", profileUid), (docSnap) => {
@@ -34,6 +38,7 @@ export default function ProfileHeader({ profileUid, isCurrentUser }: ProfileHead
           setName(data.name || "");
           setBio(data.bio || "");
           setAvatar(data.avatar || "");
+          setCardAnimation(data.cardAnimation || "none");
         }
       }
       setLoading(false);
@@ -43,7 +48,8 @@ export default function ProfileHeader({ profileUid, isCurrentUser }: ProfileHead
   }, [profileUid, editing]);
 
   useEffect(() => {
-    if (editing && availableAvatars.length === 0) {
+    if (editing && !avatarsFetched) {
+      setAvatarsFetched(true);
       getAvatars().then(avatars => {
         setAvailableAvatars(avatars);
         if (avatars.length > 0 && !avatar) {
@@ -51,7 +57,7 @@ export default function ProfileHeader({ profileUid, isCurrentUser }: ProfileHead
         }
       });
     }
-  }, [editing, availableAvatars.length, avatar]);
+  }, [editing, avatarsFetched, avatar]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -59,7 +65,8 @@ export default function ProfileHeader({ profileUid, isCurrentUser }: ProfileHead
       await updateDoc(doc(db, "users", profileUid), {
         name: name.trim(),
         bio: bio.trim(),
-        avatar: avatar
+        avatar: avatar,
+        cardAnimation: cardAnimation
       });
       setEditing(false);
     } catch (error) {
@@ -95,12 +102,12 @@ export default function ProfileHeader({ profileUid, isCurrentUser }: ProfileHead
 
   return (
     <section className="mx-auto w-full max-w-7xl px-4 py-6">
-      <div className="border border-terminal-cyan bg-terminal-black p-6 shadow-[0_0_15px_rgba(0,255,255,0.1)] relative">
+      <div className="border border-terminal-green bg-terminal-black p-6 shadow-[0_0_15px_rgba(0,255,65,0.1)] relative">
         <div className="flex flex-col md:flex-row gap-6 items-start">
           
           {/* Avatar Section */}
           <div className="flex flex-col items-center gap-3 shrink-0">
-            <div className="relative w-32 h-32 border border-terminal-cyan bg-terminal-black/50 overflow-hidden flex items-center justify-center">
+            <div className="relative w-32 h-32 border border-terminal-green bg-terminal-black/50 overflow-hidden flex items-center justify-center">
               {displayAvatar ? (
                 <Image 
                   src={`/avatars/${displayAvatar}`} 
@@ -110,17 +117,17 @@ export default function ProfileHeader({ profileUid, isCurrentUser }: ProfileHead
                   sizes="128px"
                 />
               ) : (
-                <UserCircle className="w-16 h-16 text-terminal-cyan opacity-50" />
+                <UserCircle className="w-16 h-16 text-terminal-green opacity-50" />
               )}
             </div>
             
             {editing && availableAvatars.length > 0 && (
-              <div className="flex items-center gap-2 text-terminal-cyan">
-                <button type="button" onClick={prevAvatar} className="border border-terminal-cyan hover:bg-terminal-cyan hover:text-terminal-black p-1">
+              <div className="flex items-center gap-2 text-terminal-green">
+                <button type="button" onClick={prevAvatar} className="border border-terminal-green hover:bg-terminal-green hover:text-terminal-black p-1">
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <span className="text-xs uppercase w-20 text-center truncate">{avatar || "none"}</span>
-                <button type="button" onClick={nextAvatar} className="border border-terminal-cyan hover:bg-terminal-cyan hover:text-terminal-black p-1">
+                <button type="button" onClick={nextAvatar} className="border border-terminal-green hover:bg-terminal-green hover:text-terminal-black p-1">
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
@@ -130,12 +137,12 @@ export default function ProfileHeader({ profileUid, isCurrentUser }: ProfileHead
           {/* Info Section */}
           <div className="flex-1 space-y-4 w-full">
             <div className="flex justify-between items-start">
-              <div className="text-terminal-cyan">
+              <div className="text-terminal-green">
                 <h2 className="text-sm font-bold uppercase mb-1">&gt; identificação</h2>
                 {editing ? (
                   <input
                     type="text"
-                    className="w-full px-2 py-1 border border-terminal-cyan bg-transparent text-xl font-bold uppercase text-terminal-cyan focus:ring-0 focus:outline-none"
+                    className="w-full px-2 py-1 border border-terminal-green bg-transparent text-xl font-bold uppercase text-terminal-green focus:ring-0 focus:outline-none"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="DIGITE SEU NOME"
@@ -168,11 +175,11 @@ export default function ProfileHeader({ profileUid, isCurrentUser }: ProfileHead
               )}
             </div>
 
-            <div className="text-terminal-cyan">
+            <div className="text-terminal-green">
               <h2 className="text-sm font-bold uppercase mb-1">&gt; biografia / status</h2>
               {editing ? (
                 <textarea
-                  className="w-full px-2 py-2 border border-terminal-cyan bg-transparent text-sm text-terminal-cyan focus:ring-0 focus:outline-none resize-none h-24"
+                  className="w-full px-2 py-2 border border-terminal-green bg-transparent text-sm text-terminal-green focus:ring-0 focus:outline-none resize-none h-24"
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   placeholder="DIGITE SUA BIO..."
@@ -184,6 +191,22 @@ export default function ProfileHeader({ profileUid, isCurrentUser }: ProfileHead
                 </p>
               )}
             </div>
+
+            {isCurrentUser && editing && (
+              <div className="text-terminal-green pt-2 border-t border-terminal-green/30">
+                <h2 className="text-sm font-bold uppercase mb-1">&gt; animação de fundo do mural</h2>
+                <select 
+                  className="w-full px-2 py-2 border border-terminal-green bg-terminal-black text-sm text-terminal-green focus:ring-0 focus:outline-none uppercase"
+                  value={cardAnimation}
+                  onChange={e => setCardAnimation(e.target.value)}
+                >
+                  {animations.map(anim => (
+                    <option key={anim} value={anim}>{anim}</option>
+                  ))}
+                </select>
+                <p className="text-xs mt-1 text-terminal-green/70">As animações serão exibidas no fundo das suas tarefas.</p>
+              </div>
+            )}
           </div>
 
         </div>

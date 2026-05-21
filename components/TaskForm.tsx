@@ -13,6 +13,16 @@ export default function TaskForm({ user }: { user: User }) {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const [cardColor, setCardColor] = useState("terminal-green");
+
+  const colors = [
+    { id: "terminal-green", hex: "bg-terminal-green" },
+    { id: "terminal-cyan", hex: "bg-terminal-cyan" },
+    { id: "terminal-yellow", hex: "bg-terminal-yellow" },
+    { id: "terminal-magenta", hex: "bg-terminal-magenta" },
+    { id: "terminal-red", hex: "bg-terminal-red" }
+  ];
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmedTitle = title.trim();
@@ -44,6 +54,7 @@ export default function TaskForm({ user }: { user: User }) {
         authorUid: user.uid,
         checklist: checklistItems,
         imageUrl: null,
+        cardColor: cardColor,
         timestamp: serverTimestamp()
       });
 
@@ -58,12 +69,12 @@ export default function TaskForm({ user }: { user: User }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="border border-terminal-cyan p-4 shadow-[0_0_10px_rgba(0,255,255,0.05)]">
-      <div className="grid gap-3 lg:grid-cols-[1fr_1fr_1fr_auto]">
+    <form onSubmit={handleSubmit} className="border border-terminal-green p-4 shadow-[0_0_10px_rgba(0,255,65,0.05)]">
+      <div className="grid gap-4 lg:grid-cols-[1fr_1fr_1fr_auto]">
         <label className="block">
-          <span className="mb-2 block text-sm uppercase text-terminal-cyan">&gt; criar tarefa</span>
+          <span className="mb-2 block text-sm uppercase text-terminal-green">&gt; criar tarefa</span>
           <input
-            className="w-full px-3 py-3 border border-terminal-cyan focus:ring-0 focus:border-terminal-cyan text-terminal-cyan bg-terminal-black"
+            className="w-full px-3 py-3 border border-terminal-green focus:ring-0 focus:border-terminal-green text-terminal-green bg-terminal-black"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             placeholder="> nova tarefa..."
@@ -73,9 +84,9 @@ export default function TaskForm({ user }: { user: User }) {
         </label>
 
         <label className="block">
-          <span className="mb-2 block text-sm uppercase text-terminal-cyan">&gt; descrição</span>
+          <span className="mb-2 block text-sm uppercase text-terminal-green">&gt; descrição</span>
           <input
-            className="w-full px-3 py-3 border border-terminal-cyan focus:ring-0 focus:border-terminal-cyan text-terminal-cyan bg-terminal-black"
+            className="w-full px-3 py-3 border border-terminal-green focus:ring-0 focus:border-terminal-green text-terminal-green bg-terminal-black"
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             placeholder="detalhes opcionais"
@@ -84,9 +95,9 @@ export default function TaskForm({ user }: { user: User }) {
         </label>
 
         <label className="block">
-          <span className="mb-2 block text-sm uppercase text-terminal-cyan">&gt; checklist (separado por vírgula)</span>
+          <span className="mb-2 block text-sm uppercase text-terminal-green">&gt; checklist (separado por vírgula)</span>
           <input
-            className="w-full px-3 py-3 border border-terminal-cyan focus:ring-0 focus:border-terminal-cyan text-terminal-cyan bg-terminal-black"
+            className="w-full px-3 py-3 border border-terminal-green focus:ring-0 focus:border-terminal-green text-terminal-green bg-terminal-black"
             value={checklistInput}
             onChange={(event) => setChecklistInput(event.target.value)}
             placeholder="item 1, item 2..."
@@ -94,8 +105,20 @@ export default function TaskForm({ user }: { user: User }) {
           />
         </label>
 
-        <div className="flex flex-col gap-2 lg:justify-end">
-          <button className="inline-flex items-center justify-center gap-2 px-4 py-3 uppercase border border-terminal-magenta text-terminal-magenta hover:bg-terminal-magenta hover:text-terminal-black transition-colors" type="submit" disabled={submitting}>
+        <div className="flex flex-col gap-2">
+          <span className="mb-1 block text-sm uppercase text-terminal-green">&gt; cor do card</span>
+          <div className="flex gap-2 mb-2">
+            {colors.map(c => (
+              <button
+                key={c.id}
+                type="button"
+                className={`w-6 h-6 ${c.hex} border-2 ${cardColor === c.id ? 'border-white' : 'border-transparent'} transition-all hover:scale-110`}
+                onClick={() => setCardColor(c.id)}
+                aria-label={`Selecionar cor ${c.id}`}
+              />
+            ))}
+          </div>
+          <button className="inline-flex items-center justify-center gap-2 px-4 py-2 uppercase border border-terminal-green text-terminal-green hover:bg-terminal-green hover:text-terminal-black transition-colors" type="submit" disabled={submitting}>
             <Send aria-hidden className="h-4 w-4" />
             {submitting ? "enviando" : "adicionar"}
           </button>

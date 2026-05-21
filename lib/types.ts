@@ -8,6 +8,7 @@ export interface UserProfile {
   name?: string;
   bio?: string;
   avatar?: string;
+  cardAnimation?: string;
 }
 
 export interface ChecklistItem {
@@ -25,6 +26,7 @@ export interface Task {
   authorUid: string;
   checklist?: ChecklistItem[];
   imageUrl?: string;
+  cardColor?: string;
   timestamp: Timestamp | null;
 }
 

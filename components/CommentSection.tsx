@@ -82,8 +82,8 @@ export default function CommentSection({ taskId, user }: { taskId: string; user:
   };
 
   return (
-    <section className="border-t border-terminal-cyan p-4 bg-terminal-black">
-      <div className="mb-3 flex items-center gap-2 text-sm font-bold uppercase text-terminal-cyan">
+    <section className="border-t border-terminal-green p-4 bg-terminal-black">
+      <div className="mb-3 flex items-center gap-2 text-sm font-bold uppercase text-terminal-green">
         <MessageSquare aria-hidden className="h-4 w-4" />
         comentários [{comments.length}]
       </div>
@@ -93,10 +93,10 @@ export default function CommentSection({ taskId, user }: { taskId: string; user:
         {!loading && comments.length === 0 ? <p className="text-xs uppercase text-terminal-gray">sem comentários</p> : null}
         {comments.map((comment) => (
           <div key={comment.id} className="border border-terminal-gray p-2 text-xs">
-            <div className="mb-1 flex justify-between gap-2 uppercase text-terminal-cyan">
+            <div className="mb-1 flex justify-between gap-2 uppercase text-terminal-green">
               <span>
                 {comment.authorUid ? (
-                  <Link href={`/perfil/${comment.authorUid}`} className="hover:underline hover:text-terminal-magenta transition-colors">
+                  <Link href={`/perfil/${comment.authorUid}`} className="hover:underline hover:text-terminal-yellow transition-colors">
                     {comment.authorEmail}
                   </Link>
                 ) : (
@@ -112,13 +112,13 @@ export default function CommentSection({ taskId, user }: { taskId: string; user:
 
       <form onSubmit={handleSubmit} className="flex gap-2">
         <input
-          className="min-w-0 flex-1 px-2 py-2 text-sm border border-terminal-gray focus:border-terminal-cyan text-terminal-cyan bg-terminal-black focus:ring-0 outline-none transition-colors"
+          className="min-w-0 flex-1 px-2 py-2 text-sm border border-terminal-gray focus:border-terminal-green text-terminal-green bg-terminal-black focus:ring-0 outline-none transition-colors"
           value={text}
           onChange={(event) => setText(event.target.value)}
           placeholder="> comentário..."
           maxLength={500}
         />
-        <button className="inline-flex w-12 items-center justify-center border border-terminal-gray text-terminal-gray hover:bg-terminal-cyan hover:text-terminal-black hover:border-terminal-cyan transition-colors disabled:opacity-50" type="submit" disabled={submitting || !text.trim()} aria-label="Adicionar comentário">
+        <button className="inline-flex w-12 items-center justify-center border border-terminal-gray text-terminal-gray hover:bg-terminal-green hover:text-terminal-black hover:border-terminal-green transition-colors disabled:opacity-50" type="submit" disabled={submitting || !text.trim()} aria-label="Adicionar comentário">
           <Send aria-hidden className="h-4 w-4" />
         </button>
       </form>

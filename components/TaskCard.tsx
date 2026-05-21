@@ -6,8 +6,17 @@ import type { User } from "firebase/auth";
 import { doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { CheckSquare, Square, Trash2 } from "lucide-react";
 import CommentSection from "@/components/CommentSection";
+import CardAnimations from "@/components/CardAnimations";
 import { db } from "@/lib/firebase";
 import type { Task } from "@/lib/types";
+
+const colorStyles: Record<string, { border: string; text: string; bg: string }> = {
+  "terminal-green": { border: "border-terminal-green", text: "text-terminal-green", bg: "hover:bg-terminal-green" },
+  "terminal-red": { border: "border-terminal-red", text: "text-terminal-red", bg: "hover:bg-terminal-red" },
+  "terminal-yellow": { border: "border-terminal-yellow", text: "text-terminal-yellow", bg: "hover:bg-terminal-yellow" },
+  "terminal-cyan": { border: "border-terminal-cyan", text: "text-terminal-cyan", bg: "hover:bg-terminal-cyan" },
+  "terminal-magenta": { border: "border-terminal-magenta", text: "text-terminal-magenta", bg: "hover:bg-terminal-magenta" }
+};
 
 function formatTimestamp(task: Task) {
   if (!task.timestamp) {
@@ -20,10 +29,11 @@ function formatTimestamp(task: Task) {
   });
 }
 
-export default function TaskCard({ task, user, index }: { task: Task; user: User; index: number }) {
+export default function TaskCard({ task, user, index, authorAnimation = "none" }: { task: Task; user: User; index: number, authorAnimation?: string }) {
   const isDone = task.status === "done";
   const statusText = isDone ? "feito" : "pendente";
-  const statusColor = isDone ? "text-terminal-green border-terminal-green hover:bg-terminal-green" : "text-terminal-yellow border-terminal-yellow hover:bg-terminal-yellow";
+  const baseColor = task.cardColor && colorStyles[task.cardColor] ? colorStyles[task.cardColor] : colorStyles["terminal-green"];
+  const statusColor = isDone ? "text-terminal-gray border-terminal-gray hover:bg-terminal-gray hover:text-terminal-black" : `${baseColor.text} ${baseColor.border} ${baseColor.bg} hover:text-terminal-black`;
 
   const toggleStatus = async () => {
     await updateDoc(doc(db, "tasks", task.id), {
@@ -48,30 +58,32 @@ export default function TaskCard({ task, user, index }: { task: Task; user: User
   };
 
   return (
-    <article className="border border-terminal-cyan bg-terminal-black shadow-[0_0_10px_rgba(0,255,255,0.05)] hover:shadow-[0_0_15px_rgba(0,255,255,0.15)] transition-shadow">
+    <article className={`border ${baseColor.border} bg-terminal-black shadow-[0_0_10px_rgba(0,0,0,0.5)] hover:shadow-[0_0_15px_rgba(0,255,65,0.15)] transition-shadow relative overflow-hidden group`}>
+      <CardAnimations type={authorAnimation} />
+      
       {task.imageUrl ? (
-        <div className="relative aspect-[16/10] border-b border-terminal-cyan">
+        <div className={`relative aspect-[16/10] border-b ${baseColor.border} z-10`}>
           <Image src={task.imageUrl} alt={task.title} fill className="object-cover opacity-80 grayscale" sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw" />
         </div>
       ) : null}
 
-      <div className="p-4">
+      <div className="p-4 relative z-10 bg-terminal-black/60 backdrop-blur-[2px]">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs uppercase text-terminal-cyan">
+            <p className={`text-xs uppercase ${baseColor.text}`}>
               autor: {task.authorUid ? (
-                <Link href={`/perfil/${task.authorUid}`} className="hover:underline hover:text-terminal-magenta transition-colors">
+                <Link href={`/perfil/${task.authorUid}`} className="hover:underline hover:text-white transition-colors">
                   {task.authorEmail}
                 </Link>
               ) : (
                 task.authorEmail
               )}
             </p>
-            <p className="text-xs uppercase text-terminal-cyan">hora: {formatTimestamp(task)}</p>
+            <p className={`text-xs uppercase ${baseColor.text} opacity-80`}>hora: {formatTimestamp(task)}</p>
           </div>
           <div className="flex gap-2 shrink-0">
             <button
-              className={`inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs uppercase border hover:text-terminal-black transition-colors ${statusColor}`}
+              className={`inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs uppercase border transition-colors ${statusColor}`}
               type="button"
               onClick={() => void toggleStatus()}
             >
@@ -89,15 +101,15 @@ export default function TaskCard({ task, user, index }: { task: Task; user: User
           </div>
         </div>
 
-        <h2 className={isDone ? "mb-2 text-xl font-bold uppercase line-through flex items-start gap-2 text-terminal-gray" : "mb-2 text-xl font-bold uppercase flex items-start gap-2 text-terminal-cyan"}>
+        <h2 className={isDone ? "mb-2 text-xl font-bold uppercase line-through flex items-start gap-2 text-terminal-gray" : `mb-2 text-xl font-bold uppercase flex items-start gap-2 ${baseColor.text}`}>
           <span className="opacity-50 select-none">#{String(index).padStart(2, "0")}</span>
           <span className="break-all">{task.title}</span>
         </h2>
-        {task.description ? <p className="mb-4 whitespace-pre-wrap text-sm leading-6 text-terminal-green/90">{task.description}</p> : null}
+        {task.description ? <p className={`mb-4 whitespace-pre-wrap text-sm leading-6 ${isDone ? 'text-terminal-gray' : 'text-terminal-green/90'}`}>{task.description}</p> : null}
         
         {task.checklist && task.checklist.length > 0 && (
           <div className="mb-4 space-y-1.5">
-            <h3 className="text-xs font-bold uppercase text-terminal-cyan mb-2 border-b border-terminal-cyan/30 pb-1">
+            <h3 className={`text-xs font-bold uppercase ${baseColor.text} mb-2 border-b ${baseColor.border} opacity-50 pb-1`}>
               &gt; checklist de operação
             </h3>
             {task.checklist.map((item, itemIndex) => (
@@ -116,9 +128,12 @@ export default function TaskCard({ task, user, index }: { task: Task; user: User
             ))}
           </div>
         )}
+        {/* Ensure CommentSection has a non-transparent background to hide canvas underneath it if needed, or wrap it in z-10 */}
       </div>
 
-      <CommentSection taskId={task.id} user={user} />
+      <div className="relative z-10 bg-terminal-black/90">
+        <CommentSection taskId={task.id} user={user} />
+      </div>
     </article>
   );
 }
