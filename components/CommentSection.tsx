@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import type { User } from "firebase/auth";
 import { addDoc, collection, onSnapshot, orderBy, query, QueryDocumentSnapshot, serverTimestamp } from "firebase/firestore";
@@ -14,6 +15,7 @@ function mapCommentDocument(document: QueryDocumentSnapshot): Comment {
     id: document.id,
     text: String(data.text ?? ""),
     authorEmail: String(data.authorEmail ?? "desconhecido"),
+    authorUid: String(data.authorUid ?? ""),
     timestamp: data.timestamp ?? null
   };
 }
@@ -68,6 +70,7 @@ export default function CommentSection({ taskId, user }: { taskId: string; user:
       await addDoc(collection(db, "tasks", taskId, "comments"), {
         text: trimmedText,
         authorEmail: user.email ?? "desconhecido",
+        authorUid: user.uid,
         timestamp: serverTimestamp()
       });
       setText("");
@@ -91,7 +94,15 @@ export default function CommentSection({ taskId, user }: { taskId: string; user:
         {comments.map((comment) => (
           <div key={comment.id} className="border border-terminal-gray p-2 text-xs">
             <div className="mb-1 flex justify-between gap-2 uppercase text-terminal-cyan">
-              <span>{comment.authorEmail}</span>
+              <span>
+                {comment.authorUid ? (
+                  <Link href={`/perfil/${comment.authorUid}`} className="hover:underline hover:text-terminal-magenta transition-colors">
+                    {comment.authorEmail}
+                  </Link>
+                ) : (
+                  comment.authorEmail
+                )}
+              </span>
               <span>{formatCommentTime(comment)}</span>
             </div>
             <p className="whitespace-pre-wrap text-sm text-terminal-green/90">{comment.text}</p>

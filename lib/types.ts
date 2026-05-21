@@ -5,6 +5,15 @@ export type TaskStatus = "todo" | "done";
 export interface UserProfile {
   uid: string;
   email: string;
+  name?: string;
+  bio?: string;
+  avatar?: string;
+}
+
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  isDone: boolean;
 }
 
 export interface Task {
@@ -13,6 +22,8 @@ export interface Task {
   description: string;
   status: TaskStatus;
   authorEmail: string;
+  authorUid: string;
+  checklist?: ChecklistItem[];
   imageUrl?: string;
   timestamp: Timestamp | null;
 }
@@ -21,5 +32,6 @@ export interface Comment {
   id: string;
   text: string;
   authorEmail: string;
+  authorUid: string;
   timestamp: Timestamp | null;
 }

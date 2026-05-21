@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { User } from "firebase/auth";
-import { collection, onSnapshot, orderBy, query, QueryDocumentSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, orderBy, query, QueryDocumentSnapshot, where } from "firebase/firestore";
 import TaskCard from "@/components/TaskCard";
 import TaskForm from "@/components/TaskForm";
 import TerminalConsole from "@/components/TerminalConsole";
@@ -18,18 +18,28 @@ function mapTaskDocument(document: QueryDocumentSnapshot): Task {
     description: String(data.description ?? ""),
     status: data.status === "done" ? "done" : "todo",
     authorEmail: String(data.authorEmail ?? "desconhecido"),
+    authorUid: String(data.authorUid ?? ""),
+    checklist: Array.isArray(data.checklist) ? data.checklist : undefined,
     imageUrl: typeof data.imageUrl === "string" ? data.imageUrl : undefined,
     timestamp: data.timestamp ?? null
   };
 }
 
-export default function TaskMural({ user }: { user: User }) {
+export default function TaskMural({ user, filterUid }: { user: User, filterUid?: string }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const tasksQuery = query(collection(db, "tasks"), orderBy("timestamp", "desc"));
+    let tasksQuery = query(collection(db, "tasks"), orderBy("timestamp", "desc"));
+    
+    if (filterUid) {
+      tasksQuery = query(
+        collection(db, "tasks"),
+        where("authorUid", "==", filterUid),
+        orderBy("timestamp", "desc")
+      );
+    }
 
     return onSnapshot(
       tasksQuery,
@@ -43,7 +53,7 @@ export default function TaskMural({ user }: { user: User }) {
         setLoading(false);
       }
     );
-  }, []);
+  }, [filterUid]);
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-5">

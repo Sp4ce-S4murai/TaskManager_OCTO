@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import type { User } from "firebase/auth";
 import { doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { CheckSquare, Square, Trash2 } from "lucide-react";
@@ -36,6 +37,16 @@ export default function TaskCard({ task, user, index }: { task: Task; user: User
     }
   };
 
+  const toggleChecklistItem = async (itemIndex: number) => {
+    if (!task.checklist) return;
+    const newChecklist = [...task.checklist];
+    newChecklist[itemIndex].isDone = !newChecklist[itemIndex].isDone;
+    
+    await updateDoc(doc(db, "tasks", task.id), {
+      checklist: newChecklist
+    });
+  };
+
   return (
     <article className="border border-terminal-cyan bg-terminal-black shadow-[0_0_10px_rgba(0,255,255,0.05)] hover:shadow-[0_0_15px_rgba(0,255,255,0.15)] transition-shadow">
       {task.imageUrl ? (
@@ -47,7 +58,15 @@ export default function TaskCard({ task, user, index }: { task: Task; user: User
       <div className="p-4">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs uppercase text-terminal-cyan">autor: {task.authorEmail}</p>
+            <p className="text-xs uppercase text-terminal-cyan">
+              autor: {task.authorUid ? (
+                <Link href={`/perfil/${task.authorUid}`} className="hover:underline hover:text-terminal-magenta transition-colors">
+                  {task.authorEmail}
+                </Link>
+              ) : (
+                task.authorEmail
+              )}
+            </p>
             <p className="text-xs uppercase text-terminal-cyan">hora: {formatTimestamp(task)}</p>
           </div>
           <div className="flex gap-2 shrink-0">
@@ -75,6 +94,28 @@ export default function TaskCard({ task, user, index }: { task: Task; user: User
           <span className="break-all">{task.title}</span>
         </h2>
         {task.description ? <p className="mb-4 whitespace-pre-wrap text-sm leading-6 text-terminal-green/90">{task.description}</p> : null}
+        
+        {task.checklist && task.checklist.length > 0 && (
+          <div className="mb-4 space-y-1.5">
+            <h3 className="text-xs font-bold uppercase text-terminal-cyan mb-2 border-b border-terminal-cyan/30 pb-1">
+              &gt; checklist de operação
+            </h3>
+            {task.checklist.map((item, itemIndex) => (
+              <div key={item.id} className="flex items-start gap-2">
+                <button
+                  type="button"
+                  onClick={() => toggleChecklistItem(itemIndex)}
+                  className={`mt-0.5 shrink-0 ${item.isDone ? 'text-terminal-green' : 'text-terminal-yellow hover:text-terminal-cyan'}`}
+                >
+                  {item.isDone ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                </button>
+                <span className={`text-sm ${item.isDone ? 'line-through text-terminal-gray' : 'text-terminal-green/90'}`}>
+                  {item.text}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <CommentSection taskId={task.id} user={user} />

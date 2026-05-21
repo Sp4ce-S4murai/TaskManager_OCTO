@@ -28,12 +28,14 @@ export default function TerminalConsole({ user, tasks }: TerminalConsoleProps) {
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyPointer, setHistoryPointer] = useState<number>(-1);
 
-  const consoleEndRef = useRef<HTMLDivElement | null>(null);
+  const consoleContainerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   // Auto-scroll inside the logs terminal
   useEffect(() => {
-    consoleEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (consoleContainerRef.current) {
+      consoleContainerRef.current.scrollTop = consoleContainerRef.current.scrollHeight;
+    }
   }, [logs]);
 
   // Focus terminal input when clicking anywhere inside the terminal box
@@ -78,6 +80,7 @@ export default function TerminalConsole({ user, tasks }: TerminalConsoleProps) {
             { type: "output", text: '  add "título" ["desc"]  -> Criar uma nova tarefa (use aspas para espaços)' },
             { type: "output", text: "  pendente <índice>      -> Marcar tarefa no <índice> como PENDENTE" },
             { type: "output", text: "  feito <índice>         -> Marcar tarefa no <índice> como FEITO" },
+            { type: "output", text: "  check <tarefa> <item>  -> Marcar item da checklist como feito/pendente" },
             { type: "output", text: "  rm <índice>            -> Remoção permanente da tarefa" },
             { type: "output", text: '  msg <índice> "txt"     -> Adicionar um comentário (use aspas)' },
             { type: "output", text: "  limpar                 -> Limpar o histórico do console" },
@@ -147,7 +150,8 @@ export default function TerminalConsole({ user, tasks }: TerminalConsoleProps) {
         case "delete":
         case "rm":
         case "comentar":
-        case "msg": {
+        case "msg":
+        case "check": {
           if (args.length < 2) {
             setLogs((prev) => [...prev, { type: "error", text: `Erro de Sintaxe: comando requer o índice da tarefa (ex: "${commandName} 1")` }]);
             break;
@@ -187,9 +191,27 @@ export default function TerminalConsole({ user, tasks }: TerminalConsoleProps) {
             await addDoc(collection(db, "tasks", targetTask.id, "comments"), {
               text: textContent.trim(),
               authorEmail: user.email ?? "desconhecido",
+              authorUid: user.uid,
               timestamp: serverTimestamp()
             });
             setLogs((prev) => [...prev, { type: "output", text: `SUCESSO: Comentário adicionado à Tarefa #${index}.` }]);
+          } else if (commandName === "check") {
+            if (args.length < 3) {
+              setLogs((prev) => [...prev, { type: "error", text: 'Erro de Sintaxe: check <índice_tarefa> <índice_item>' }]);
+              break;
+            }
+            const itemIndex = parseInt(args[2], 10) - 1; // 1-indexed to 0-indexed
+            
+            if (!targetTask.checklist || isNaN(itemIndex) || itemIndex < 0 || itemIndex >= targetTask.checklist.length) {
+              setLogs((prev) => [...prev, { type: "error", text: `Erro: Item #${args[2]} não encontrado na checklist da tarefa #${index}` }]);
+              break;
+            }
+
+            const newChecklist = [...targetTask.checklist];
+            newChecklist[itemIndex].isDone = !newChecklist[itemIndex].isDone;
+            
+            await updateDoc(doc(db, "tasks", targetTask.id), { checklist: newChecklist });
+            setLogs((prev) => [...prev, { type: "output", text: `SUCESSO: Item #${args[2]} da Tarefa #${index} alterado para ${newChecklist[itemIndex].isDone ? "FEITO" : "PENDENTE"}.` }]);
           }
           break;
         }
@@ -240,9 +262,9 @@ export default function TerminalConsole({ user, tasks }: TerminalConsoleProps) {
       className="relative mb-6 border border-terminal-cyan bg-terminal-black p-4 font-mono shadow-[0_0_20px_rgba(0,255,255,0.15)] cursor-text select-none group"
     >
       {/* Visual CRT Scanline Filter effect for Brutalist WOW factor */}
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,3px_100%] opacity-20"></div>
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,3px_100%] opacity-20 z-0"></div>
 
-      <div className="mb-2 flex items-center justify-between border-b border-terminal-cyan/30 pb-2 text-xs uppercase text-terminal-cyan">
+      <div className="relative mb-2 flex items-center justify-between border-b border-terminal-cyan/30 pb-2 text-xs uppercase text-terminal-cyan z-10">
         <span className="flex items-center gap-1.5 font-bold">
           <Terminal className="h-3.5 w-3.5 animate-pulse text-terminal-magenta" />
           CONSOLE DE COMANDOS OCTO
@@ -254,7 +276,7 @@ export default function TerminalConsole({ user, tasks }: TerminalConsoleProps) {
       </div>
 
       {/* Terminal Logs */}
-      <div className="h-44 overflow-y-auto pr-1 text-sm space-y-1 mb-2 relative z-10">
+      <div ref={consoleContainerRef} className="relative h-44 overflow-y-auto pr-1 text-sm space-y-1 mb-2 z-10">
         {logs.map((log, index) => {
           let color = "text-terminal-green";
           if (log.type === "error") color = "text-terminal-red font-bold";
@@ -267,11 +289,10 @@ export default function TerminalConsole({ user, tasks }: TerminalConsoleProps) {
             </div>
           );
         })}
-        <div ref={consoleEndRef} />
       </div>
 
       {/* CLI Input line */}
-      <div className="flex items-center text-sm border-t border-terminal-cyan/20 pt-2 relative z-10">
+      <div className="relative flex items-center text-sm border-t border-terminal-cyan/20 pt-2 z-10">
         <span className="text-terminal-magenta mr-2 shrink-0 select-none font-bold">octo@funcionario:~$</span>
         <input
           ref={inputRef}

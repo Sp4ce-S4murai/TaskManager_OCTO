@@ -1,16 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import type { User } from "firebase/auth";
 import { LogOut, Terminal } from "lucide-react";
+import { AuthContext } from "@/lib/auth-context";
 
-const TaskMural = dynamic(() => import("@/components/TaskMural"), {
-  ssr: false,
-  loading: () => <p className="mx-auto max-w-7xl p-4 uppercase text-terminal-yellow">carregando módulo do mural...</p>
-});
-
-export default function AuthGate() {
+export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [email, setEmail] = useState("");
@@ -134,24 +131,34 @@ export default function AuthGate() {
   }
 
   return (
-    <main className="min-h-screen bg-terminal-black text-terminal-green">
-      <header className="sticky top-0 z-10 border-b border-terminal-cyan bg-terminal-black px-4 py-3 shadow-[0_4px_20px_rgba(0,255,255,0.05)]">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-terminal-cyan">
-            <h1 className="text-2xl font-bold uppercase tracking-normal">OCTO TASK TERMINAL</h1>
-            <p className="text-sm uppercase text-terminal-yellow">sessão: {user.email}</p>
+    <AuthContext.Provider value={{ user, logout: handleLogout }}>
+      <main className="min-h-screen bg-terminal-black text-terminal-green">
+        <header className="sticky top-0 z-10 border-b border-terminal-cyan bg-terminal-black px-4 py-3 shadow-[0_4px_20px_rgba(0,255,255,0.05)]">
+          <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-terminal-cyan">
+              <Link href={`/`} className="text-2xl font-bold uppercase tracking-normal hover:underline">OCTO TASK TERMINAL</Link>
+              <p className="text-sm uppercase text-terminal-yellow">sessão: {user.email}</p>
+            </div>
+            <div className="flex gap-2">
+              <Link
+                href={`/perfil/${user.uid}`}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 uppercase border border-terminal-cyan text-terminal-cyan hover:bg-terminal-cyan hover:text-terminal-black transition-colors"
+              >
+                meu perfil
+              </Link>
+              <button
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 uppercase border border-terminal-magenta text-terminal-magenta hover:bg-terminal-magenta hover:text-terminal-black transition-colors"
+                type="button"
+                onClick={() => void handleLogout()}
+              >
+                <LogOut aria-hidden className="h-4 w-4" />
+                sair
+              </button>
+            </div>
           </div>
-          <button
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 uppercase border-terminal-magenta text-terminal-magenta hover:bg-terminal-magenta hover:text-terminal-black transition-colors"
-            type="button"
-            onClick={() => void handleLogout()}
-          >
-            <LogOut aria-hidden className="h-4 w-4" />
-            sair
-          </button>
-        </div>
-      </header>
-      <TaskMural user={user} />
-    </main>
+        </header>
+        {children}
+      </main>
+    </AuthContext.Provider>
   );
 }
