@@ -276,7 +276,7 @@ export default function CardAnimations({ type, className = "" }: CardAnimationsP
     }
 
     return () => {
-      window.removeEventListener("resize", resize);
+      window.removeEventListener("resize", checkResize);
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
     };
   }, [type]);

@@ -7,8 +7,10 @@ const config: Config = {
     "./lib/**/*.{js,ts,jsx,tsx,mdx}"
   ],
   safelist: [
-    { pattern: /(bg|text|border)-terminal-(green|cyan|yellow|magenta|red|black|gray)/ },
-    { pattern: /hover:(bg|text|border)-terminal-(green|cyan|yellow|magenta|red|black|gray)/ }
+    { 
+      pattern: /(bg|text|border)-terminal-(green|cyan|yellow|magenta|red|black|gray)/,
+      variants: ['hover']
+    }
   ],
   theme: {
     extend: {
