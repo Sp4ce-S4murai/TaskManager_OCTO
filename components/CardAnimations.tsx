@@ -95,38 +95,7 @@ export default function CardAnimations({ type }: Props) {
       tick();
     }
 
-    // ─── 3. GLITCH ───────────────────────────────────────────────────
-    else if (type === "glitch") {
-      let frame = 0;
-      const tick = () => {
-        ctx.clearRect(0, 0, W, H);
-        
-        // Background scanlines
-        ctx.fillStyle = "rgba(0, 255, 65, 0.03)";
-        for (let y = 0; y < H; y += 4) {
-          ctx.fillRect(0, y, W, 1);
-        }
-
-        // Draw random glitch bars
-        if (frame % 8 === 0) {
-          const numBars = Math.floor(Math.random() * 4);
-          for (let i = 0; i < numBars; i++) {
-            ctx.fillStyle = Math.random() > 0.3 ? "rgba(0, 255, 65, 0.15)" : "rgba(255, 0, 100, 0.08)";
-            const barW = 50 + Math.random() * 200;
-            const barH = 2 + Math.random() * 8;
-            const barX = Math.random() * (W - barW);
-            const barY = Math.random() * (H - barH);
-            ctx.fillRect(barX, barY, barW, barH);
-          }
-        }
-
-        frame++;
-        raf = requestAnimationFrame(tick);
-      };
-      tick();
-    }
-
-    // ─── 4. GRID ─────────────────────────────────────────────────────
+    // ─── 3. GRID ─────────────────────────────────────────────────────
     else if (type === "grid") {
       let offset = 0;
       const tick = () => {
@@ -165,7 +134,7 @@ export default function CardAnimations({ type }: Props) {
       tick();
     }
 
-    // ─── 5. STARFIELD ────────────────────────────────────────────────
+    // ─── 4. STARFIELD ────────────────────────────────────────────────
     else if (type === "starfield") {
       interface Star {
         x: number;
@@ -207,50 +176,7 @@ export default function CardAnimations({ type }: Props) {
       tick();
     }
 
-    // ─── 6. HEXAGONS ─────────────────────────────────────────────────
-    else if (type === "hexagons") {
-      let time = 0;
-      const size = 20;
-      const h = size * Math.sqrt(3);
-
-      const drawHex = (cx: number, cy: number, r: number, alpha: number) => {
-        ctx.beginPath();
-        for (let i = 0; i < 6; i++) {
-          const angle = (Math.PI / 3) * i;
-          const x = cx + r * Math.cos(angle);
-          const y = cy + r * Math.sin(angle);
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.closePath();
-        ctx.strokeStyle = `rgba(0, 255, 65, ${alpha})`;
-        ctx.stroke();
-      };
-
-      const tick = () => {
-        ctx.clearRect(0, 0, W, H);
-        ctx.lineWidth = 0.8;
-
-        for (let x = 0; x < W + size * 2; x += size * 1.5) {
-          for (let y = 0; y < H + h; y += h) {
-            const isOdd = Math.round(x / (size * 1.5)) % 2 === 1;
-            const cy = y + (isOdd ? h / 2 : 0);
-
-            const dist = Math.sqrt(Math.pow(x - W/2, 2) + Math.pow(cy - H/2, 2));
-            const pulse = Math.sin(time - dist * 0.008) * 0.5 + 0.5;
-            const alpha = 0.02 + pulse * 0.12;
-
-            drawHex(x, cy, size - 1, alpha);
-          }
-        }
-
-        time += 0.04;
-        raf = requestAnimationFrame(tick);
-      };
-      tick();
-    }
-
-    // ─── 7. BINARY ───────────────────────────────────────────────────
+    // ─── 5. BINARY ───────────────────────────────────────────────────
     else if (type === "binary") {
       const FS = 11;
       const cols = Math.ceil(W / FS);
@@ -273,24 +199,62 @@ export default function CardAnimations({ type }: Props) {
       tick();
     }
 
-    // ─── 8. RADAR ────────────────────────────────────────────────────
+    // ─── 6. RADAR ────────────────────────────────────────────────────
     else if (type === "radar") {
       let angle = 0;
       const cx = W / 2;
       const cy = H / 2;
-      const radius = Math.min(cx, cy) * 0.9;
-      
+      const radius = Math.min(cx, cy) * 0.95;
+
+      // Radar targets (blips)
+      interface Blip { x: number; y: number; angle: number; intensity: number; size: number }
+      const blips: Blip[] = [
+        { x: cx + radius * 0.4, y: cy - radius * 0.3, angle: 0, intensity: 0, size: 4 },
+        { x: cx - radius * 0.5, y: cy - radius * 0.2, angle: 0, intensity: 0, size: 5 },
+        { x: cx + radius * 0.3, y: cy + radius * 0.5, angle: 0, intensity: 0, size: 3 },
+        { x: cx - radius * 0.2, y: cy + radius * 0.4, angle: 0, intensity: 0, size: 4 }
+      ];
+
+      // Calculate the angle of each target from the center
+      for (const b of blips) {
+        let a = Math.atan2(b.y - cy, b.x - cx);
+        if (a < 0) a += Math.PI * 2;
+        b.angle = a;
+      }
+
       const tick = () => {
         ctx.clearRect(0, 0, W, H);
 
-        ctx.strokeStyle = "rgba(0, 255, 65, 0.08)";
-        ctx.lineWidth = 0.8;
-        for (let r = radius / 3; r <= radius; r += radius / 3) {
+        // 1. Draw outer compass circle and degree ticks
+        ctx.strokeStyle = "rgba(0, 255, 65, 0.15)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 2. Draw degree tick marks
+        ctx.beginPath();
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 18) { // every 10 degrees
+          const x1 = cx + radius * Math.cos(a);
+          const y1 = cy + radius * Math.sin(a);
+          const x2 = cx + (radius - 5) * Math.cos(a);
+          const y2 = cy + (radius - 5) * Math.sin(a);
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+        }
+        ctx.strokeStyle = "rgba(0, 255, 65, 0.2)";
+        ctx.stroke();
+
+        // 3. Draw concentric grid circles
+        ctx.strokeStyle = "rgba(0, 255, 65, 0.06)";
+        for (let r = radius * 0.25; r < radius; r += radius * 0.25) {
           ctx.beginPath();
           ctx.arc(cx, cy, r, 0, Math.PI * 2);
           ctx.stroke();
         }
 
+        // 4. Draw crosshairs lines
+        ctx.strokeStyle = "rgba(0, 255, 65, 0.08)";
         ctx.beginPath();
         ctx.moveTo(cx - radius, cy);
         ctx.lineTo(cx + radius, cy);
@@ -298,54 +262,106 @@ export default function CardAnimations({ type }: Props) {
         ctx.lineTo(cx, cy + radius);
         ctx.stroke();
 
+        // 5. Draw sweep trail (gradient pie slice)
+        const trailSlices = 35;
+        const sliceAngle = 0.015;
+        for (let i = 0; i < trailSlices; i++) {
+          const sliceAlpha = 0.22 * Math.pow(1 - i / trailSlices, 1.8);
+          ctx.fillStyle = `rgba(0, 255, 65, ${sliceAlpha})`;
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          const a1 = angle - i * sliceAngle;
+          const a2 = angle - (i + 1) * sliceAngle;
+          ctx.lineTo(cx + radius * Math.cos(a1), cy + radius * Math.sin(a1));
+          ctx.lineTo(cx + radius * Math.cos(a2), cy + radius * Math.sin(a2));
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        // 6. Draw main radar sweeping line
         ctx.beginPath();
         ctx.moveTo(cx, cy);
-        const endX = cx + radius * Math.cos(angle);
-        const endY = cy + radius * Math.sin(angle);
-        ctx.lineTo(endX, endY);
-        ctx.strokeStyle = "rgba(0, 255, 65, 0.6)";
+        ctx.lineTo(cx + radius * Math.cos(angle), cy + radius * Math.sin(angle));
+        ctx.strokeStyle = "rgba(0, 255, 65, 0.75)";
         ctx.lineWidth = 1.8;
         ctx.stroke();
 
-        const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-        gradient.addColorStop(0, "rgba(0, 255, 65, 0.03)");
-        gradient.addColorStop(1, "rgba(0, 255, 65, 0)");
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(cx, cy, radius, angle - 0.25, angle);
-        ctx.lineTo(cx, cy);
-        ctx.closePath();
-        ctx.fill();
+        // 7. Render and fade targets (blips) based on sweep line position
+        for (const b of blips) {
+          let diff = angle - b.angle;
+          while (diff < 0) diff += Math.PI * 2;
+          while (diff >= Math.PI * 2) diff -= Math.PI * 2;
 
-        angle += 0.025;
+          if (diff < 0.08) {
+            b.intensity = 1.0;
+          } else {
+            b.intensity = Math.max(0, b.intensity - 0.006);
+          }
+
+          if (b.intensity > 0) {
+            // Target blip glowing circle
+            ctx.fillStyle = `rgba(0, 255, 65, ${b.intensity * 0.8})`;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Outward expanding ping wave
+            ctx.strokeStyle = `rgba(0, 255, 65, ${b.intensity * 0.35 * (1 - b.intensity)})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.size + (1 - b.intensity) * 20, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        }
+
+        // 8. Cyberpunk telemetry overlay texts
+        ctx.fillStyle = "rgba(0, 255, 65, 0.4)";
+        ctx.font = "8px monospace";
+        ctx.fillText("SYS.LOC: ACTIVE", 12, 18);
+        ctx.fillText(`SCAN.DEG: ${Math.round((angle * 180) / Math.PI) % 360}°`, 12, 28);
+        ctx.fillText(`TRK.CNT: ${blips.filter(b => b.intensity > 0).length}`, W - 75, 18);
+        ctx.fillText("SIG.TYPE: NEURAL", W - 75, 28);
+
+        angle += 0.02;
         raf = requestAnimationFrame(tick);
       };
       tick();
     }
 
-    // ─── 9. NEBULA ───────────────────────────────────────────────────
+    // ─── 7. NEBULA ───────────────────────────────────────────────────
     else if (type === "nebula") {
       let t = 0;
       const tick = () => {
         ctx.clearRect(0, 0, W, H);
         
-        const gx = W / 2 + Math.sin(t) * W * 0.15;
-        const gy = H / 2 + Math.cos(t * 0.8) * H * 0.15;
-        const g = ctx.createRadialGradient(gx, gy, 0, W / 2, H / 2, Math.max(W, H) * 0.8);
-        g.addColorStop(0, "rgba(0, 255, 65, 0.25)");
-        g.addColorStop(0.5, "rgba(0, 180, 255, 0.08)");
-        g.addColorStop(1, "rgba(0, 0, 0, 0)");
+        // Multi-layered moving nebulas
+        const gx1 = W / 2 + Math.sin(t) * W * 0.25;
+        const gy1 = H / 2 + Math.cos(t * 0.7) * H * 0.25;
+        const g1 = ctx.createRadialGradient(gx1, gy1, 0, gx1, gy1, Math.max(W, H) * 0.6);
+        g1.addColorStop(0, "rgba(0, 255, 65, 0.45)"); // Intense Green center
+        g1.addColorStop(0.5, "rgba(0, 120, 255, 0.15)"); // Blends into Blue
+        g1.addColorStop(1, "rgba(0, 0, 0, 0)");
         
-        ctx.fillStyle = g;
+        const gx2 = W / 2 + Math.cos(t * 0.9) * W * 0.25;
+        const gy2 = H / 2 + Math.sin(t * 0.5) * H * 0.25;
+        const g2 = ctx.createRadialGradient(gx2, gy2, 0, gx2, gy2, Math.max(W, H) * 0.5);
+        g2.addColorStop(0, "rgba(0, 255, 255, 0.35)"); // Intense Cyan center
+        g2.addColorStop(0.6, "rgba(0, 255, 65, 0.1)");
+        g2.addColorStop(1, "rgba(0, 0, 0, 0)");
+
+        ctx.fillStyle = g1;
         ctx.fillRect(0, 0, W, H);
         
-        t += 0.012;
+        ctx.fillStyle = g2;
+        ctx.fillRect(0, 0, W, H);
+        
+        t += 0.008;
         raf = requestAnimationFrame(tick);
       };
       tick();
     }
 
-    // ─── 10. PLASMA ──────────────────────────────────────────────────
+    // ─── 8. PLASMA ───────────────────────────────────────────────────
     else if (type === "plasma") {
       let t = 0;
       const STEP = 16;
