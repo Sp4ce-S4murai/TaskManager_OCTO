@@ -10,39 +10,53 @@ import CardAnimations from "@/components/CardAnimations";
 import { db } from "@/lib/firebase";
 import type { Task } from "@/lib/types";
 
-const colorStyles: Record<string, { border: string; text: string; bg: string }> = {
-  "terminal-green": { border: "border-terminal-green", text: "text-terminal-green", bg: "hover:bg-terminal-green" },
-  "terminal-red": { border: "border-terminal-red", text: "text-terminal-red", bg: "hover:bg-terminal-red" },
-  "terminal-yellow": { border: "border-terminal-yellow", text: "text-terminal-yellow", bg: "hover:bg-terminal-yellow" },
-  "terminal-cyan": { border: "border-terminal-cyan", text: "text-terminal-cyan", bg: "hover:bg-terminal-cyan" },
-  "terminal-magenta": { border: "border-terminal-magenta", text: "text-terminal-magenta", bg: "hover:bg-terminal-magenta" }
+// Color definitions using inline styles so Tailwind purge is irrelevant
+const COLOR_MAP: Record<string, { hex: string; name: string }> = {
+  "terminal-green":   { hex: "#00FF41", name: "Verde" },
+  "terminal-red":     { hex: "#FF003C", name: "Vermelho" },
+  "terminal-yellow":  { hex: "#FFFF00", name: "Amarelo" },
+  "terminal-cyan":    { hex: "#00FFFF", name: "Ciano" },
+  "terminal-magenta": { hex: "#FF00FF", name: "Magenta" },
 };
 
-function formatTimestamp(task: Task) {
-  if (!task.timestamp) {
-    return "aguardando timestamp";
-  }
+const DEFAULT_COLOR = COLOR_MAP["terminal-green"];
 
+function getColor(cardColor?: string) {
+  if (!cardColor) return DEFAULT_COLOR;
+  return COLOR_MAP[cardColor] ?? DEFAULT_COLOR;
+}
+
+function formatTimestamp(task: Task) {
+  if (!task.timestamp) return "aguardando timestamp";
   return task.timestamp.toDate().toLocaleString("pt-BR", {
     dateStyle: "short",
-    timeStyle: "short"
+    timeStyle: "short",
   });
 }
 
-export default function TaskCard({ task, user, index, authorAnimation = "none" }: { task: Task; user: User; index: number, authorAnimation?: string }) {
+export default function TaskCard({
+  task,
+  user,
+  index,
+  authorAnimation = "none",
+}: {
+  task: Task;
+  user: User;
+  index: number;
+  authorAnimation?: string;
+}) {
   const isDone = task.status === "done";
-  const statusText = isDone ? "feito" : "pendente";
-  const baseColor = task.cardColor && colorStyles[task.cardColor] ? colorStyles[task.cardColor] : colorStyles["terminal-green"];
-  const statusColor = isDone ? "text-terminal-gray border-terminal-gray hover:bg-terminal-gray hover:text-terminal-black" : `${baseColor.text} ${baseColor.border} ${baseColor.bg} hover:text-terminal-black`;
+  const color = getColor(task.cardColor);
+  const colorHex = isDone ? "#333333" : color.hex;
 
   const toggleStatus = async () => {
     await updateDoc(doc(db, "tasks", task.id), {
-      status: isDone ? "todo" : "done"
+      status: isDone ? "todo" : "done",
     });
   };
 
   const handleDelete = async () => {
-    if (window.confirm(`Tem certeza que deseja deletar a tarefa #${index} ("${task.title}")?`)) {
+    if (window.confirm(`Deletar tarefa #${index} "${task.title}"?`)) {
       await deleteDoc(doc(db, "tasks", task.id));
     }
   };
@@ -50,88 +64,151 @@ export default function TaskCard({ task, user, index, authorAnimation = "none" }
   const toggleChecklistItem = async (itemIndex: number) => {
     if (!task.checklist) return;
     const newChecklist = [...task.checklist];
-    newChecklist[itemIndex].isDone = !newChecklist[itemIndex].isDone;
-    
-    await updateDoc(doc(db, "tasks", task.id), {
-      checklist: newChecklist
-    });
+    newChecklist[itemIndex] = {
+      ...newChecklist[itemIndex],
+      isDone: !newChecklist[itemIndex].isDone,
+    };
+    await updateDoc(doc(db, "tasks", task.id), { checklist: newChecklist });
   };
 
   return (
-    <article className={`border ${baseColor.border} bg-terminal-black shadow-[0_0_10px_rgba(0,0,0,0.5)] hover:shadow-[0_0_15px_rgba(0,255,65,0.15)] transition-shadow relative overflow-hidden group`}>
+    <article
+      className="relative overflow-hidden bg-[#000000] transition-shadow"
+      style={{
+        border: `1px solid ${colorHex}`,
+        boxShadow: `0 0 12px ${colorHex}22`,
+      }}
+    >
+      {/* Background animation — rendered below everything */}
       <CardAnimations type={authorAnimation} />
-      
-      {task.imageUrl ? (
-        <div className={`relative aspect-[16/10] border-b ${baseColor.border} z-10`}>
-          <Image src={task.imageUrl} alt={task.title} fill className="object-cover opacity-80 grayscale" sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw" />
-        </div>
-      ) : null}
 
-      <div className="p-4 relative z-10 bg-terminal-black/60 backdrop-blur-[2px]">
+      {/* Task image */}
+      {task.imageUrl && (
+        <div
+          className="relative aspect-[16/10] z-10"
+          style={{ borderBottom: `1px solid ${colorHex}` }}
+        >
+          <Image
+            src={task.imageUrl}
+            alt={task.title}
+            fill
+            className="object-cover opacity-80 grayscale"
+            sizes="(min-width:1280px) 33vw,(min-width:768px) 50vw,100vw"
+          />
+        </div>
+      )}
+
+      {/* Card body — semi-transparent so animation peeks through */}
+      <div className="relative z-10 p-4 bg-black/65 backdrop-blur-[1px]">
+
+        {/* Top row: author / buttons */}
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
-            <p className={`text-xs uppercase ${baseColor.text}`}>
-              autor: {task.authorUid ? (
-                <Link href={`/perfil/${task.authorUid}`} className="hover:underline hover:text-white transition-colors">
+            <p className="text-xs uppercase" style={{ color: colorHex }}>
+              autor:{" "}
+              {task.authorUid ? (
+                <Link
+                  href={`/perfil/${task.authorUid}`}
+                  className="hover:underline hover:text-white transition-colors"
+                >
                   {task.authorEmail}
                 </Link>
               ) : (
                 task.authorEmail
               )}
             </p>
-            <p className={`text-xs uppercase ${baseColor.text} opacity-80`}>hora: {formatTimestamp(task)}</p>
+            <p className="text-xs uppercase opacity-60" style={{ color: colorHex }}>
+              hora: {formatTimestamp(task)}
+            </p>
           </div>
+
           <div className="flex gap-2 shrink-0">
+            {/* Status toggle */}
             <button
-              className={`inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs uppercase border transition-colors ${statusColor}`}
               type="button"
               onClick={() => void toggleStatus()}
+              className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs uppercase border font-bold transition-colors hover:bg-opacity-90"
+              style={{
+                borderColor: colorHex,
+                color: colorHex,
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = colorHex;
+                (e.currentTarget as HTMLButtonElement).style.color = "#000";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
+                (e.currentTarget as HTMLButtonElement).style.color = colorHex;
+              }}
             >
-              {isDone ? <CheckSquare aria-hidden className="h-3.5 w-3.5" /> : <Square aria-hidden className="h-3.5 w-3.5" />}
-              {statusText}
+              {isDone ? <CheckSquare className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />}
+              {isDone ? "feito" : "pendente"}
             </button>
+
+            {/* Delete */}
             <button
-              className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs uppercase border border-terminal-red text-terminal-red hover:bg-terminal-red hover:text-terminal-black transition-colors"
               type="button"
               onClick={() => void handleDelete()}
               aria-label={`Deletar tarefa ${task.title}`}
+              className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs uppercase border border-[#FF003C] text-[#FF003C] hover:bg-[#FF003C] hover:text-black transition-colors"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
 
-        <h2 className={isDone ? "mb-2 text-xl font-bold uppercase line-through flex items-start gap-2 text-terminal-gray" : `mb-2 text-xl font-bold uppercase flex items-start gap-2 ${baseColor.text}`}>
-          <span className="opacity-50 select-none">#{String(index).padStart(2, "0")}</span>
+        {/* Title */}
+        <h2
+          className="mb-2 text-xl font-bold uppercase flex items-start gap-2"
+          style={{ color: isDone ? "#444" : colorHex, textDecoration: isDone ? "line-through" : "none" }}
+        >
+          <span className="opacity-40 select-none">#{String(index).padStart(2, "0")}</span>
           <span className="break-all">{task.title}</span>
         </h2>
-        {task.description ? <p className={`mb-4 whitespace-pre-wrap text-sm leading-6 ${isDone ? 'text-terminal-gray' : 'text-terminal-green/90'}`}>{task.description}</p> : null}
-        
+
+        {/* Description */}
+        {task.description && (
+          <p className="mb-4 whitespace-pre-wrap text-sm leading-6 text-[#00FF41]/80">
+            {task.description}
+          </p>
+        )}
+
+        {/* Checklist */}
         {task.checklist && task.checklist.length > 0 && (
           <div className="mb-4 space-y-1.5">
-            <h3 className={`text-xs font-bold uppercase ${baseColor.text} mb-2 border-b ${baseColor.border} opacity-50 pb-1`}>
+            <h3
+              className="text-xs font-bold uppercase mb-2 pb-1 opacity-50"
+              style={{ borderBottom: `1px solid ${colorHex}`, color: colorHex }}
+            >
               &gt; checklist de operação
             </h3>
             {task.checklist.map((item, itemIndex) => (
               <div key={item.id} className="flex items-start gap-2">
                 <button
                   type="button"
-                  onClick={() => toggleChecklistItem(itemIndex)}
-                  className={`mt-0.5 shrink-0 ${item.isDone ? 'text-terminal-green' : 'text-terminal-yellow hover:text-terminal-cyan'}`}
+                  onClick={() => void toggleChecklistItem(itemIndex)}
+                  className="mt-0.5 shrink-0 transition-colors"
+                  style={{ color: item.isDone ? "#00FF41" : "#FFFF00" }}
                 >
                   {item.isDone ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
                 </button>
-                <span className={`text-sm ${item.isDone ? 'line-through text-terminal-gray' : 'text-terminal-green/90'}`}>
+                <span
+                  className="text-sm"
+                  style={{
+                    color: item.isDone ? "#444" : "#00FF41cc",
+                    textDecoration: item.isDone ? "line-through" : "none",
+                  }}
+                >
                   {item.text}
                 </span>
               </div>
             ))}
           </div>
         )}
-        {/* Ensure CommentSection has a non-transparent background to hide canvas underneath it if needed, or wrap it in z-10 */}
       </div>
 
-      <div className="relative z-10 bg-terminal-black/90">
+      {/* Comment section */}
+      <div className="relative z-10 bg-black/80">
         <CommentSection taskId={task.id} user={user} />
       </div>
     </article>

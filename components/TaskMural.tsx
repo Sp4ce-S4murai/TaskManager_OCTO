@@ -20,6 +20,7 @@ function mapTaskDocument(document: QueryDocumentSnapshot): Task {
     authorUid: String(data.authorUid ?? ""),
     checklist: Array.isArray(data.checklist) ? data.checklist : undefined,
     imageUrl: typeof data.imageUrl === "string" ? data.imageUrl : undefined,
+    cardColor: typeof data.cardColor === "string" ? data.cardColor : undefined,
     timestamp: data.timestamp ?? null
   };
 }
