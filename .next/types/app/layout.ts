@@ -1,4 +1,4 @@
-// File: /home/polvolox/Documentos/Projetos/TaskManager_OCTO/app/layout.tsx
+// File: C:\Projetos\TaskManager_OCTO\app\layout.tsx
 import * as entry from '../../../app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

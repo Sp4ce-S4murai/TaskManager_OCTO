@@ -98,8 +98,8 @@ export default function TaskCard({
         </div>
       )}
 
-      {/* Card body — semi-transparent so animation peeks through */}
-      <div className="relative z-10 p-4 bg-black/65 backdrop-blur-[1px]">
+      {/* Card body — transparent so animation is fully visible */}
+      <div className="relative z-10 p-4 bg-transparent">
 
         {/* Top row: author / buttons */}
         <div className="mb-3 flex items-start justify-between gap-3">
