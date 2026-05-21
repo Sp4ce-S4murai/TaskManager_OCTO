@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
+import { createPortal } from "react-dom";
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
-import { UserCircle, Save, Edit3, X } from "lucide-react";
+import { UserCircle, Save, Edit3, X, Check } from "lucide-react";
 import { db } from "@/lib/firebase";
 import type { UserProfile } from "@/lib/types";
 import { getAvatars } from "@/app/actions";
@@ -18,8 +19,8 @@ const ANIMATIONS = [
   { id: "matrix",    label: "Matrix" },
   { id: "runes",     label: "Runas" },
   { id: "glitch",    label: "Glitch" },
-  { id: "grid",      label: "Grade 3D" },
-  { id: "starfield", label: "Campo Estelar" },
+  { id: "grid",      label: "Grade" },
+  { id: "starfield", label: "Estrelas" },
   { id: "hexagons",  label: "Hexágonos" },
   { id: "binary",    label: "Binário" },
   { id: "radar",     label: "Radar" },
@@ -27,24 +28,118 @@ const ANIMATIONS = [
   { id: "plasma",    label: "Plasma" },
 ];
 
+// ─── Avatar Gallery Popup (rendered via Portal) ───────────────────────────
+function AvatarGalleryPopup({
+  avatars,
+  current,
+  onSelect,
+  onClose,
+}: {
+  avatars: string[];
+  current: string;
+  onSelect: (av: string) => void;
+  onClose: () => void;
+}) {
+  // Close on Escape key
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return createPortal(
+    // Backdrop
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center"
+      style={{ backgroundColor: "rgba(0,0,0,0.85)" }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      {/* Modal box */}
+      <div
+        className="bg-[#000] border border-[#00FF41] w-full max-w-2xl max-h-[85vh] flex flex-col"
+        style={{ boxShadow: "0 0 40px rgba(0,255,65,0.25)" }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-[#00FF41]/30">
+          <h2 className="text-[#00FF41] font-bold uppercase text-sm tracking-widest">
+            ⬡ Galeria Neural — selecione seu avatar
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-[#FF003C] hover:text-white transition-colors"
+            aria-label="Fechar galeria"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Grid */}
+        <div className="overflow-y-auto p-4 grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3">
+          {avatars.map((av) => {
+            const selected = av === current;
+            return (
+              <button
+                key={av}
+                type="button"
+                onClick={() => { onSelect(av); onClose(); }}
+                className="relative aspect-square overflow-hidden transition-transform hover:scale-105 focus:outline-none"
+                style={{
+                  border: selected ? "2px solid #fff" : "2px solid rgba(0,255,65,0.3)",
+                  boxShadow: selected ? "0 0 12px rgba(0,255,65,0.6)" : "none",
+                }}
+                title={av.replace(/^avatar_/,"").replace(/_\d+\.png$/,"").replace(/_/g," ")}
+              >
+                <Image
+                  src={`/avatars/${av}`}
+                  alt={av}
+                  fill
+                  className="object-cover"
+                  sizes="120px"
+                  unoptimized
+                />
+                {selected && (
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                    <Check className="w-6 h-6 text-white" />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3 border-t border-[#00FF41]/20 text-[#00FF41]/40 text-xs uppercase">
+          {avatars.length} avatares disponíveis · clique para selecionar · ESC para fechar
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────
 export default function ProfileHeader({ profileUid, isCurrentUser }: ProfileHeaderProps) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
 
-  // Edit form state
+  // Edit form
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [avatar, setAvatar] = useState("");
   const [cardAnimation, setCardAnimation] = useState("none");
   const [saving, setSaving] = useState(false);
 
-  // Gallery state
+  // Gallery popup
   const [availableAvatars, setAvailableAvatars] = useState<string[]>([]);
   const [showGallery, setShowGallery] = useState(false);
-  const galleryRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
 
-  // Live profile snapshot
+  // Client-only for portal
+  useEffect(() => { setMounted(true); }, []);
+
+  // Live snapshot
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "users", profileUid), (snap) => {
       if (snap.exists()) {
@@ -62,23 +157,12 @@ export default function ProfileHeader({ profileUid, isCurrentUser }: ProfileHead
     return () => unsub();
   }, [profileUid, editing]);
 
-  // Load avatars list when entering edit mode
+  // Fetch avatars when edit mode opens
   useEffect(() => {
     if (editing && availableAvatars.length === 0) {
       getAvatars().then((files) => setAvailableAvatars(files));
     }
   }, [editing, availableAvatars.length]);
-
-  // Close gallery when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (galleryRef.current && !galleryRef.current.contains(e.target as Node)) {
-        setShowGallery(false);
-      }
-    };
-    if (showGallery) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showGallery]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -90,9 +174,8 @@ export default function ProfileHeader({ profileUid, isCurrentUser }: ProfileHead
         cardAnimation,
       });
       setEditing(false);
-      setShowGallery(false);
     } catch (err) {
-      console.error("Failed to update profile", err);
+      console.error("Erro ao salvar perfil:", err);
     } finally {
       setSaving(false);
     }
@@ -110,33 +193,53 @@ export default function ProfileHeader({ profileUid, isCurrentUser }: ProfileHead
   };
 
   if (loading) {
-    return <div className="mx-auto max-w-7xl p-4 uppercase text-terminal-yellow">carregando perfil...</div>;
+    return (
+      <div className="mx-auto max-w-7xl p-6 text-[#FFFF00] uppercase text-sm">
+        carregando perfil...
+      </div>
+    );
   }
   if (!profile) {
-    return <div className="mx-auto max-w-7xl p-4 uppercase text-terminal-red">perfil não encontrado no mainframe.</div>;
+    return (
+      <div className="mx-auto max-w-7xl p-6 text-[#FF003C] uppercase text-sm">
+        perfil não encontrado.
+      </div>
+    );
   }
 
-  const displayAvatar = editing ? avatar : profile.avatar;
+  const displayAvatar = editing ? avatar : (profile.avatar || "");
 
   return (
-    <section className="mx-auto w-full max-w-7xl px-4 py-6">
-      <div className="border border-terminal-green bg-terminal-black p-6 shadow-[0_0_15px_rgba(0,255,65,0.1)]">
-        <div className="flex flex-col md:flex-row gap-6 items-start">
+    <>
+      {/* Gallery Popup rendered via portal */}
+      {mounted && showGallery && availableAvatars.length > 0 && (
+        <AvatarGalleryPopup
+          avatars={availableAvatars}
+          current={avatar}
+          onSelect={setAvatar}
+          onClose={() => setShowGallery(false)}
+        />
+      )}
 
-          {/* ── Avatar column ── */}
-          <div className="flex flex-col items-center gap-3 shrink-0">
+      <section className="mx-auto w-full max-w-7xl px-4 py-6">
+        <div
+          className="bg-[#000] p-6"
+          style={{ border: "1px solid #00FF41", boxShadow: "0 0 15px rgba(0,255,65,0.08)" }}
+        >
+          <div className="flex flex-col md:flex-row gap-6 items-start">
 
-            {/* Avatar preview / click target */}
-            <div className="relative" ref={galleryRef}>
+            {/* ── Avatar ── */}
+            <div className="flex flex-col items-center gap-2 shrink-0">
               <button
                 type="button"
                 disabled={!editing}
-                onClick={() => setShowGallery(prev => !prev)}
-                className={[
-                  "relative w-32 h-32 border border-terminal-green bg-terminal-black overflow-hidden flex items-center justify-center",
-                  editing ? "cursor-pointer hover:border-white" : "cursor-default",
-                ].join(" ")}
-                aria-label="Selecionar avatar"
+                onClick={() => editing && setShowGallery(true)}
+                className="relative w-32 h-32 overflow-hidden group"
+                style={{
+                  border: editing ? "1px solid #fff" : "1px solid #00FF41",
+                  cursor: editing ? "pointer" : "default",
+                }}
+                aria-label={editing ? "Abrir galeria de avatares" : "Avatar"}
               >
                 {displayAvatar ? (
                   <Image
@@ -148,170 +251,162 @@ export default function ProfileHeader({ profileUid, isCurrentUser }: ProfileHead
                     unoptimized
                   />
                 ) : (
-                  <UserCircle className="w-16 h-16 text-terminal-green opacity-50" />
+                  <UserCircle className="w-full h-full text-[#00FF41] opacity-40 p-4" />
                 )}
+
                 {editing && (
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                    <span className="text-white text-xs font-bold uppercase px-2 py-1 bg-black/60">
-                      trocar foto
-                    </span>
+                  <div
+                    className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={{ backgroundColor: "rgba(0,0,0,0.65)" }}
+                  >
+                    <span className="text-white text-xs font-bold uppercase">trocar</span>
+                    <span className="text-[#00FF41] text-[10px] mt-0.5">clique aqui</span>
                   </div>
                 )}
               </button>
 
-              {/* Gallery dropdown — absolutely positioned relative to the button wrapper */}
-              {showGallery && availableAvatars.length > 0 && (
-                <div className="absolute top-[136px] left-0 z-50 bg-terminal-black border border-terminal-green shadow-[0_0_20px_rgba(0,255,65,0.3)] w-72">
-                  <div className="flex items-center justify-between px-3 py-2 border-b border-terminal-green/40">
-                    <span className="text-terminal-green text-xs font-bold uppercase">Galeria Neural</span>
-                    <button
-                      type="button"
-                      onClick={() => setShowGallery(false)}
-                      className="text-terminal-red hover:text-white"
-                      aria-label="Fechar galeria"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-4 gap-1.5 p-3 max-h-64 overflow-y-auto">
-                    {availableAvatars.map((av) => (
+              {editing && (
+                <p className="text-[#00FF41]/50 text-[10px] uppercase text-center">
+                  clique na foto para trocar
+                </p>
+              )}
+            </div>
+
+            {/* ── Info ── */}
+            <div className="flex-1 space-y-4 w-full">
+
+              {/* Name row */}
+              <div className="flex justify-between items-start gap-4">
+                <div className="flex-1 text-[#00FF41]">
+                  <p className="text-[10px] uppercase opacity-50 mb-1">&gt; identificação</p>
+                  {editing ? (
+                    <input
+                      type="text"
+                      className="w-full bg-transparent text-xl font-bold uppercase text-[#00FF41] outline-none px-2 py-1"
+                      style={{ border: "1px solid #00FF41" }}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="SEU NOME"
+                      maxLength={50}
+                    />
+                  ) : (
+                    <p className="text-2xl font-bold uppercase">
+                      {profile.name || "Membro Não Identificado"}
+                    </p>
+                  )}
+                  <p className="text-[10px] uppercase opacity-40 mt-1">{profile.email}</p>
+                </div>
+
+                {isCurrentUser && (
+                  <div className="flex gap-2 shrink-0 mt-1">
+                    {!editing ? (
                       <button
-                        key={av}
-                        type="button"
-                        onClick={() => { setAvatar(av); setShowGallery(false); }}
-                        className={[
-                          "relative aspect-square border-2 transition-all overflow-hidden",
-                          avatar === av
-                            ? "border-white scale-105"
-                            : "border-terminal-green/30 hover:border-terminal-green",
-                        ].join(" ")}
-                        title={av.replace(/_/g, " ").replace(/\.[^.]+$/, "")}
+                        onClick={() => setEditing(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase transition-colors"
+                        style={{ border: "1px solid #FFFF00", color: "#FFFF00" }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLElement).style.backgroundColor = "#FFFF00";
+                          (e.currentTarget as HTMLElement).style.color = "#000";
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
+                          (e.currentTarget as HTMLElement).style.color = "#FFFF00";
+                        }}
                       >
-                        <Image
-                          src={`/avatars/${av}`}
-                          alt={av}
-                          fill
-                          className="object-cover"
-                          sizes="64px"
-                          unoptimized
-                        />
+                        <Edit3 className="w-3.5 h-3.5" /> editar
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={cancelEdit}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase transition-colors"
+                          style={{ border: "1px solid #FF003C", color: "#FF003C" }}
+                          onMouseEnter={(e) => {
+                            (e.currentTarget as HTMLElement).style.backgroundColor = "#FF003C";
+                            (e.currentTarget as HTMLElement).style.color = "#000";
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
+                            (e.currentTarget as HTMLElement).style.color = "#FF003C";
+                          }}
+                        >
+                          <X className="w-3.5 h-3.5" /> cancelar
+                        </button>
+                        <button
+                          onClick={() => void handleSave()}
+                          disabled={saving}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase transition-colors disabled:opacity-40"
+                          style={{ border: "1px solid #00FF41", color: "#00FF41" }}
+                          onMouseEnter={(e) => {
+                            (e.currentTarget as HTMLElement).style.backgroundColor = "#00FF41";
+                            (e.currentTarget as HTMLElement).style.color = "#000";
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
+                            (e.currentTarget as HTMLElement).style.color = "#00FF41";
+                          }}
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          {saving ? "salvando..." : "salvar"}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Bio */}
+              <div className="text-[#00FF41]">
+                <p className="text-[10px] uppercase opacity-50 mb-1">&gt; biografia</p>
+                {editing ? (
+                  <textarea
+                    className="w-full bg-transparent text-sm text-[#00FF41] outline-none px-2 py-2 resize-none h-20"
+                    style={{ border: "1px solid #00FF41" }}
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="DESCRIÇÃO..."
+                    maxLength={200}
+                  />
+                ) : (
+                  <p className="text-sm opacity-80 whitespace-pre-wrap">
+                    {profile.bio || "Nenhum status definido."}
+                  </p>
+                )}
+              </div>
+
+              {/* Animation picker */}
+              {isCurrentUser && editing && (
+                <div style={{ borderTop: "1px solid rgba(0,255,65,0.2)", paddingTop: "12px" }}>
+                  <p className="text-[10px] text-[#00FF41] uppercase opacity-50 mb-2">
+                    &gt; animação de fundo das suas tarefas
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {ANIMATIONS.map((anim) => (
+                      <button
+                        key={anim.id}
+                        type="button"
+                        onClick={() => setCardAnimation(anim.id)}
+                        className="px-3 py-1 text-xs uppercase font-bold transition-all"
+                        style={{
+                          border: `1px solid ${cardAnimation === anim.id ? "#00FF41" : "rgba(0,255,65,0.3)"}`,
+                          backgroundColor: cardAnimation === anim.id ? "#00FF41" : "transparent",
+                          color: cardAnimation === anim.id ? "#000" : "rgba(0,255,65,0.6)",
+                        }}
+                      >
+                        {anim.label}
                       </button>
                     ))}
                   </div>
+                  <p className="text-[10px] mt-2 text-[#00FF41]/30">
+                    Aparece no fundo de todas as suas tarefas no mural.
+                  </p>
                 </div>
               )}
+
             </div>
-
-            {editing && (
-              <p className="text-terminal-green/60 text-xs uppercase text-center">
-                clique na foto para trocar
-              </p>
-            )}
-          </div>
-
-          {/* ── Info column ── */}
-          <div className="flex-1 space-y-4 w-full">
-
-            {/* Header row */}
-            <div className="flex justify-between items-start gap-4">
-              <div className="text-terminal-green flex-1">
-                <h2 className="text-xs font-bold uppercase mb-1 opacity-60">&gt; identificação</h2>
-                {editing ? (
-                  <input
-                    type="text"
-                    className="w-full px-2 py-1 border border-terminal-green bg-transparent text-xl font-bold uppercase text-terminal-green focus:ring-0 focus:outline-none"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="NOME DE USUÁRIO"
-                    maxLength={50}
-                  />
-                ) : (
-                  <p className="text-2xl font-bold uppercase">{profile.name || "Membro Não Identificado"}</p>
-                )}
-                <p className="text-xs uppercase text-terminal-green/50 mt-1">UID: {profile.email}</p>
-              </div>
-
-              {isCurrentUser && (
-                <div className="flex gap-2 shrink-0 mt-1">
-                  {!editing ? (
-                    <button
-                      onClick={() => setEditing(true)}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 border border-terminal-yellow text-terminal-yellow hover:bg-terminal-yellow hover:text-terminal-black transition-colors uppercase text-xs font-bold"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                      editar
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        onClick={cancelEdit}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 border border-terminal-red text-terminal-red hover:bg-terminal-red hover:text-terminal-black transition-colors uppercase text-xs font-bold"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                        cancelar
-                      </button>
-                      <button
-                        onClick={() => void handleSave()}
-                        disabled={saving}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 border border-terminal-green text-terminal-green hover:bg-terminal-green hover:text-terminal-black transition-colors uppercase text-xs font-bold disabled:opacity-50"
-                      >
-                        <Save className="w-3.5 h-3.5" />
-                        {saving ? "salvando..." : "salvar"}
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Bio */}
-            <div className="text-terminal-green">
-              <h2 className="text-xs font-bold uppercase mb-1 opacity-60">&gt; biografia / status</h2>
-              {editing ? (
-                <textarea
-                  className="w-full px-2 py-2 border border-terminal-green bg-transparent text-sm text-terminal-green focus:ring-0 focus:outline-none resize-none h-20"
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder="DESCRIÇÃO DO USUÁRIO..."
-                  maxLength={200}
-                />
-              ) : (
-                <p className="text-sm text-terminal-green/80 whitespace-pre-wrap">
-                  {profile.bio || "Nenhum status definido."}
-                </p>
-              )}
-            </div>
-
-            {/* Animation selector (only when editing) */}
-            {isCurrentUser && editing && (
-              <div className="text-terminal-green pt-3 border-t border-terminal-green/20">
-                <h2 className="text-xs font-bold uppercase mb-2 opacity-60">&gt; animação de fundo das suas tarefas</h2>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                  {ANIMATIONS.map((anim) => (
-                    <button
-                      key={anim.id}
-                      type="button"
-                      onClick={() => setCardAnimation(anim.id)}
-                      className={[
-                        "px-2 py-1.5 border text-xs uppercase font-bold transition-all",
-                        cardAnimation === anim.id
-                          ? "border-terminal-green bg-terminal-green text-terminal-black"
-                          : "border-terminal-green/40 text-terminal-green/70 hover:border-terminal-green hover:text-terminal-green",
-                      ].join(" ")}
-                    >
-                      {anim.label}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-xs mt-2 text-terminal-green/40">
-                  Esta animação aparece no fundo de todas as suas tarefas no mural.
-                </p>
-              </div>
-            )}
-
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 }
