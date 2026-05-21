@@ -2,13 +2,8 @@
 
 import { useEffect, useRef } from "react";
 
-type AnimationType =
-  | "matrix" | "runes" | "glitch" | "grid" | "starfield"
-  | "hexagons" | "binary" | "radar" | "nebula" | "plasma"
-  | "none";
-
 interface Props {
-  type?: AnimationType | string;
+  type?: string;
 }
 
 export default function CardAnimations({ type }: Props) {
@@ -22,168 +17,176 @@ export default function CardAnimations({ type }: Props) {
     let raf = 0;
     let started = false;
 
-    function startAnimation(W: number, H: number) {
+    const startAnimation = (W: number, H: number) => {
       if (started) return;
       started = true;
-      const ctx = canvas!.getContext("2d")!;
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext("2d")!;
 
-      // ─── MATRIX ───────────────────────────────────────────────────
+      // ─── MATRIX ────────────────────────────────────────────────────
       if (type === "matrix") {
         const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*";
         const FS = 13;
         const cols = Math.ceil(W / FS);
-        const drops = new Array(cols).fill(1);
-        function tick() {
+        const drops = new Array<number>(cols).fill(1);
+        const tick = () => {
           ctx.fillStyle = "rgba(0,0,0,0.12)";
-          ctx.fillRect(0, 0, canvas!.width, canvas!.height);
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.fillStyle = "#00FF41";
           ctx.font = `${FS}px monospace`;
           for (let i = 0; i < drops.length; i++) {
             ctx.fillText(CHARS[Math.floor(Math.random() * CHARS.length)], i * FS, drops[i] * FS);
-            if (drops[i] * FS > canvas!.height && Math.random() > 0.975) drops[i] = 0;
+            if (drops[i] * FS > canvas.height && Math.random() > 0.975) drops[i] = 0;
             drops[i]++;
           }
           raf = requestAnimationFrame(tick);
-        }
+        };
         tick();
       }
 
-      // ─── RUNES ────────────────────────────────────────────────────
+      // ─── RUNES ─────────────────────────────────────────────────────
       else if (type === "runes") {
         const RUNES = "ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛟᛞ".split("");
-        const pts = Array.from({ length: 22 }, () => ({
-          x: Math.random() * W, y: Math.random() * H,
+        type P = { x: number; y: number; ch: string; sp: number; op: number };
+        const pts: P[] = Array.from({ length: 22 }, () => ({
+          x: Math.random() * W,
+          y: Math.random() * H,
           ch: RUNES[Math.floor(Math.random() * RUNES.length)],
           sp: 0.25 + Math.random() * 0.5,
           op: 0.15 + Math.random() * 0.45,
         }));
-        function tick() {
-          ctx.clearRect(0, 0, canvas!.width, canvas!.height);
+        const tick = () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.font = "17px monospace";
           for (const p of pts) {
             ctx.fillStyle = `rgba(0,255,65,${p.op})`;
             ctx.fillText(p.ch, p.x, p.y);
             p.y -= p.sp;
-            if (p.y < -20) { p.y = canvas!.height + 20; p.x = Math.random() * canvas!.width; }
+            if (p.y < -20) { p.y = canvas.height + 20; p.x = Math.random() * canvas.width; }
           }
           raf = requestAnimationFrame(tick);
-        }
+        };
         tick();
       }
 
-      // ─── GLITCH ───────────────────────────────────────────────────
+      // ─── GLITCH ────────────────────────────────────────────────────
       else if (type === "glitch") {
         let t = 0;
-        function tick() {
-          const cw = canvas!.width; const ch = canvas!.height;
+        const tick = () => {
           ctx.fillStyle = "rgba(0,0,0,0.07)";
-          ctx.fillRect(0, 0, cw, ch);
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
           if (t % 4 === 0) {
             for (let i = 0; i < 5; i++) {
               ctx.fillStyle = Math.random() > 0.5 ? "rgba(0,255,65,0.3)" : "rgba(255,0,255,0.18)";
-              ctx.fillRect(Math.random() * cw, Math.random() * ch, Math.random() * cw * 0.6, 1 + Math.random() * 5);
+              ctx.fillRect(
+                Math.random() * canvas.width,
+                Math.random() * canvas.height,
+                Math.random() * canvas.width * 0.6,
+                1 + Math.random() * 5
+              );
             }
           }
           t++;
           raf = requestAnimationFrame(tick);
-        }
+        };
         tick();
       }
 
-      // ─── GRID ─────────────────────────────────────────────────────
+      // ─── GRID ──────────────────────────────────────────────────────
       else if (type === "grid") {
         let off = 0;
-        function tick() {
-          const cw = canvas!.width; const ch = canvas!.height;
+        const tick = () => {
           ctx.fillStyle = "rgba(0,0,0,0.14)";
-          ctx.fillRect(0, 0, cw, ch);
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.strokeStyle = "rgba(0,255,65,0.22)";
           ctx.lineWidth = 0.5;
           ctx.beginPath();
-          for (let x = 0; x < cw; x += 28) { ctx.moveTo(x, 0); ctx.lineTo(x, ch); }
-          for (let y = off % 28; y < ch; y += 28) { ctx.moveTo(0, y); ctx.lineTo(cw, y); }
+          for (let x = 0; x < canvas.width; x += 28) { ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); }
+          for (let y = off % 28; y < canvas.height; y += 28) { ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); }
           ctx.stroke();
           off += 0.35;
           raf = requestAnimationFrame(tick);
-        }
+        };
         tick();
       }
 
-      // ─── STARFIELD ────────────────────────────────────────────────
+      // ─── STARFIELD ─────────────────────────────────────────────────
       else if (type === "starfield") {
-        const stars = Array.from({ length: 70 }, () => ({
+        type Star = { x: number; y: number; s: number };
+        const stars: Star[] = Array.from({ length: 70 }, () => ({
           x: Math.random() * W, y: Math.random() * H, s: 0.4 + Math.random() * 1.6,
         }));
-        function tick() {
-          const cw = canvas!.width; const ch = canvas!.height;
+        const tick = () => {
           ctx.fillStyle = "rgba(0,0,0,0.22)";
-          ctx.fillRect(0, 0, cw, ch);
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.fillStyle = "rgba(255,255,255,0.88)";
           for (const st of stars) {
             ctx.fillRect(st.x, st.y, st.s, st.s);
             st.y += st.s * 0.35;
-            if (st.y > ch) { st.y = 0; st.x = Math.random() * cw; }
+            if (st.y > canvas.height) { st.y = 0; st.x = Math.random() * canvas.width; }
           }
           raf = requestAnimationFrame(tick);
-        }
+        };
         tick();
       }
 
-      // ─── HEXAGONS ─────────────────────────────────────────────────
+      // ─── HEXAGONS ──────────────────────────────────────────────────
       else if (type === "hexagons") {
         let time = 0;
-        function hex(cx: number, cy: number, r: number) {
+        const drawHex = (cx: number, cy: number, r: number) => {
           ctx.beginPath();
           for (let i = 0; i < 6; i++) {
             const a = (Math.PI / 3) * i;
-            i === 0
-              ? ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a))
-              : ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+            if (i === 0) ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+            else ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
           }
-          ctx.closePath(); ctx.stroke();
-        }
-        function tick() {
-          const cw = canvas!.width; const ch = canvas!.height;
+          ctx.closePath();
+          ctx.stroke();
+        };
+        const tick = () => {
           ctx.fillStyle = "rgba(0,0,0,0.07)";
-          ctx.fillRect(0, 0, cw, ch);
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.strokeStyle = `rgba(0,255,65,${0.07 + Math.abs(Math.sin(time)) * 0.1})`;
           ctx.lineWidth = 0.7;
-          const r = 20; const rh = r * Math.sqrt(3);
-          for (let c = 0, x = 0; x < cw + r * 2; c++, x += r * 1.5)
-            for (let y = 0; y < ch + rh; y += rh)
-              hex(x, y + (c % 2 === 1 ? rh / 2 : 0), r);
+          const r = 20;
+          const rh = r * Math.sqrt(3);
+          for (let c = 0, x = 0; x < canvas.width + r * 2; c++, x += r * 1.5) {
+            for (let y = 0; y < canvas.height + rh; y += rh) {
+              drawHex(x, y + (c % 2 === 1 ? rh / 2 : 0), r);
+            }
+          }
           time += 0.035;
           raf = requestAnimationFrame(tick);
-        }
+        };
         tick();
       }
 
-      // ─── BINARY ───────────────────────────────────────────────────
+      // ─── BINARY ────────────────────────────────────────────────────
       else if (type === "binary") {
         const FS = 11;
         const cols = Math.ceil(W / FS);
-        const drops = new Array(cols).fill(1);
-        function tick() {
-          const cw = canvas!.width; const ch = canvas!.height;
+        const drops = new Array<number>(cols).fill(1);
+        const tick = () => {
           ctx.fillStyle = "rgba(0,0,0,0.1)";
-          ctx.fillRect(0, 0, cw, ch);
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.fillStyle = "rgba(0,255,65,0.55)";
           ctx.font = `${FS}px monospace`;
           for (let i = 0; i < drops.length; i++) {
             ctx.fillText(Math.random() > 0.5 ? "1" : "0", i * FS, drops[i] * FS);
-            if (drops[i] * FS > ch && Math.random() > 0.95) drops[i] = 0;
+            if (drops[i] * FS > canvas.height && Math.random() > 0.95) drops[i] = 0;
             drops[i]++;
           }
           raf = requestAnimationFrame(tick);
-        }
+        };
         tick();
       }
 
-      // ─── RADAR ────────────────────────────────────────────────────
+      // ─── RADAR ─────────────────────────────────────────────────────
       else if (type === "radar") {
         let angle = 0;
-        function tick() {
-          const cw = canvas!.width; const ch = canvas!.height;
+        const tick = () => {
+          const cw = canvas.width; const ch = canvas.height;
           const cx = cw / 2; const cy = ch / 2;
           const r = Math.min(cx, cy) * 0.82;
           ctx.fillStyle = "rgba(0,0,0,0.11)";
@@ -193,7 +196,6 @@ export default function CardAnimations({ type }: Props) {
           for (const f of [1, 0.66, 0.33]) {
             ctx.beginPath(); ctx.arc(cx, cy, r * f, 0, Math.PI * 2); ctx.stroke();
           }
-          // sweep line
           ctx.beginPath();
           ctx.moveTo(cx, cy);
           ctx.lineTo(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r);
@@ -202,15 +204,15 @@ export default function CardAnimations({ type }: Props) {
           ctx.stroke();
           angle += 0.035;
           raf = requestAnimationFrame(tick);
-        }
+        };
         tick();
       }
 
-      // ─── NEBULA ───────────────────────────────────────────────────
+      // ─── NEBULA ────────────────────────────────────────────────────
       else if (type === "nebula") {
         let t = 0;
-        function tick() {
-          const cw = canvas!.width; const ch = canvas!.height;
+        const tick = () => {
+          const cw = canvas.width; const ch = canvas.height;
           ctx.clearRect(0, 0, cw, ch);
           const gx = cw / 2 + Math.sin(t) * cw * 0.18;
           const gy = ch / 2 + Math.cos(t * 0.7) * ch * 0.18;
@@ -222,16 +224,16 @@ export default function CardAnimations({ type }: Props) {
           ctx.fillRect(0, 0, cw, ch);
           t += 0.016;
           raf = requestAnimationFrame(tick);
-        }
+        };
         tick();
       }
 
-      // ─── PLASMA ───────────────────────────────────────────────────
+      // ─── PLASMA ────────────────────────────────────────────────────
       else if (type === "plasma") {
         let t = 0;
         const STEP = 16;
-        function tick() {
-          const cw = canvas!.width; const ch = canvas!.height;
+        const tick = () => {
+          const cw = canvas.width; const ch = canvas.height;
           ctx.clearRect(0, 0, cw, ch);
           for (let x = 0; x < cw; x += STEP) {
             for (let y = 0; y < ch; y += STEP) {
@@ -243,33 +245,27 @@ export default function CardAnimations({ type }: Props) {
           }
           t += 0.04;
           raf = requestAnimationFrame(tick);
-        }
+        };
         tick();
       }
-    }
+    };
 
-    // Watch for when the canvas gets real dimensions via ResizeObserver
+    // ResizeObserver: only start when element has real pixel dimensions
     const ro = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!entry) return;
       const { width, height } = entry.contentRect;
-      if (width > 0 && height > 0) {
-        canvas.width = Math.round(width);
-        canvas.height = Math.round(height);
-        startAnimation(canvas.width, canvas.height);
-      }
+      if (width > 0 && height > 0) startAnimation(Math.round(width), Math.round(height));
     });
     ro.observe(canvas);
 
-    // Also try immediately in case element is already laid out
+    // Immediate fallback if layout is already done
     if (canvas.offsetWidth > 0 && canvas.offsetHeight > 0) {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
-      startAnimation(canvas.width, canvas.height);
+      startAnimation(canvas.offsetWidth, canvas.offsetHeight);
     }
 
     return () => {
-      started = true; // prevent late start
+      started = true; // block late start
       ro.disconnect();
       cancelAnimationFrame(raf);
     };
