@@ -28,6 +28,7 @@ export interface Task {
   imageUrl?: string;
   cardColor?: string;
   timestamp: Timestamp | null;
+  affiliates?: string[];
 }
 
 export interface Comment {

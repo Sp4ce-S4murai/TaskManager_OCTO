@@ -4,11 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 import type { User } from "firebase/auth";
 import { doc, updateDoc, deleteDoc } from "firebase/firestore";
-import { CheckSquare, Square, Trash2 } from "lucide-react";
+import { CheckSquare, Square, Trash2, UserPlus, UserMinus } from "lucide-react";
 import CommentSection from "@/components/CommentSection";
 import CardAnimations from "@/components/CardAnimations";
 import { db } from "@/lib/firebase";
-import type { Task } from "@/lib/types";
+import type { Task, UserProfile } from "@/lib/types";
 
 // Color definitions using inline styles so Tailwind purge is irrelevant
 const COLOR_MAP: Record<string, { hex: string; name: string }> = {
@@ -39,15 +39,30 @@ export default function TaskCard({
   user,
   index,
   authorAnimation = "none",
+  userProfiles = {},
 }: {
   task: Task;
   user: User;
   index: number;
   authorAnimation?: string;
+  userProfiles?: Record<string, UserProfile>;
 }) {
   const isDone = task.status === "done";
   const color = getColor(task.cardColor);
   const colorHex = isDone ? "#333333" : color.hex;
+
+  // Affiliation Logic
+  const isAffiliated = task.affiliates?.includes(user.uid) ?? false;
+
+  const toggleAffiliation = async () => {
+    const newAffiliates = isAffiliated
+      ? (task.affiliates ?? []).filter((uid) => uid !== user.uid)
+      : [...(task.affiliates ?? []), user.uid];
+
+    await updateDoc(doc(db, "tasks", task.id), {
+      affiliates: newAffiliates,
+    });
+  };
 
   const toggleStatus = async () => {
     await updateDoc(doc(db, "tasks", task.id), {
@@ -120,9 +135,55 @@ export default function TaskCard({
             <p className="text-xs uppercase opacity-60" style={{ color: colorHex }}>
               hora: {formatTimestamp(task)}
             </p>
+            {task.affiliates && task.affiliates.length > 0 && (
+              <p className="text-xs uppercase mt-1.5" style={{ color: colorHex }}>
+                afiliados:{" "}
+                {task.affiliates.map((uid, idx) => {
+                  const affProfile = userProfiles[uid];
+                  const displayName = affProfile?.name || affProfile?.email || "desconhecido";
+                  return (
+                    <span key={uid}>
+                      {idx > 0 && ", "}
+                      <Link
+                        href={`/perfil/${uid}`}
+                        className="hover:underline hover:text-white transition-colors font-bold"
+                      >
+                        {displayName}
+                      </Link>
+                    </span>
+                  );
+                })}
+              </p>
+            )}
           </div>
 
-          <div className="flex gap-2 shrink-0">
+          <div className="flex gap-2 shrink-0 items-center">
+            {/* Affiliate Toggle */}
+            {user.uid !== task.authorUid && (
+              <button
+                type="button"
+                onClick={() => void toggleAffiliation()}
+                className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs uppercase border font-bold transition-colors"
+                style={{
+                  borderColor: isAffiliated ? "#FFFF00" : colorHex,
+                  color: isAffiliated ? "#FFFF00" : colorHex,
+                }}
+                onMouseEnter={(e) => {
+                  const target = e.currentTarget as HTMLButtonElement;
+                  target.style.backgroundColor = isAffiliated ? "#FFFF00" : colorHex;
+                  target.style.color = "#000";
+                }}
+                onMouseLeave={(e) => {
+                  const target = e.currentTarget as HTMLButtonElement;
+                  target.style.backgroundColor = "transparent";
+                  target.style.color = isAffiliated ? "#FFFF00" : colorHex;
+                }}
+              >
+                {isAffiliated ? <UserMinus className="h-3.5 w-3.5" /> : <UserPlus className="h-3.5 w-3.5" />}
+                {isAffiliated ? "desafiliar" : "afiliar-se"}
+              </button>
+            )}
+
             {/* Status toggle */}
             <button
               type="button"

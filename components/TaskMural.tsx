@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import type { User } from "firebase/auth";
-import { collection, onSnapshot, orderBy, query, QueryDocumentSnapshot, where } from "firebase/firestore";
+import { collection, onSnapshot, or, orderBy, query, QueryDocumentSnapshot, where } from "firebase/firestore";
 import TaskCard from "@/components/TaskCard";
 import TaskForm from "@/components/TaskForm";
 import { db } from "@/lib/firebase";
-import type { Task } from "@/lib/types";
+import type { Task, UserProfile } from "@/lib/types";
 
 function mapTaskDocument(document: QueryDocumentSnapshot): Task {
   const data = document.data();
@@ -21,31 +21,44 @@ function mapTaskDocument(document: QueryDocumentSnapshot): Task {
     checklist: Array.isArray(data.checklist) ? data.checklist : undefined,
     imageUrl: typeof data.imageUrl === "string" ? data.imageUrl : undefined,
     cardColor: typeof data.cardColor === "string" ? data.cardColor : undefined,
-    timestamp: data.timestamp ?? null
+    timestamp: data.timestamp ?? null,
+    affiliates: Array.isArray(data.affiliates) ? data.affiliates : []
   };
 }
 
 export default function TaskMural({ user, filterUid }: { user: User, filterUid?: string }) {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [userAnimations, setUserAnimations] = useState<Record<string, string>>({});
+  const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    let tasksQuery = query(collection(db, "tasks"), orderBy("timestamp", "desc"));
+    let tasksQuery;
     
     if (filterUid) {
       tasksQuery = query(
         collection(db, "tasks"),
-        where("authorUid", "==", filterUid),
-        orderBy("timestamp", "desc")
+        or(
+          where("authorUid", "==", filterUid),
+          where("affiliates", "array-contains", filterUid)
+        )
       );
+    } else {
+      tasksQuery = query(collection(db, "tasks"), orderBy("timestamp", "desc"));
     }
 
     return onSnapshot(
       tasksQuery,
       (snapshot) => {
-        setTasks(snapshot.docs.map(mapTaskDocument));
+        const mapped = snapshot.docs.map(mapTaskDocument);
+        if (filterUid) {
+          mapped.sort((a, b) => {
+            const tA = a.timestamp?.toMillis() ?? 0;
+            const tB = b.timestamp?.toMillis() ?? 0;
+            return tB - tA;
+          });
+        }
+        setTasks(mapped);
         setLoading(false);
         setError("");
       },
@@ -57,15 +70,14 @@ export default function TaskMural({ user, filterUid }: { user: User, filterUid?:
   }, [filterUid]);
 
   useEffect(() => {
-    // Fetch users collection to map uid -> cardAnimation
+    // Fetch users collection to map uid -> UserProfile
     const usersQuery = collection(db, "users");
     return onSnapshot(usersQuery, (snapshot) => {
-      const animMap: Record<string, string> = {};
+      const profilesMap: Record<string, UserProfile> = {};
       snapshot.forEach(doc => {
-        const data = doc.data();
-        animMap[doc.id] = data.cardAnimation || "none";
+        profilesMap[doc.id] = doc.data() as UserProfile;
       });
-      setUserAnimations(animMap);
+      setUserProfiles(profilesMap);
     });
   }, []);
 
@@ -90,9 +102,16 @@ export default function TaskMural({ user, filterUid }: { user: User, filterUid?:
 
       <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
         {tasks.map((task, index) => {
-          const animation = task.authorUid ? userAnimations[task.authorUid] : "none";
+          const animation = task.authorUid ? (userProfiles[task.authorUid]?.cardAnimation || "none") : "none";
           return (
-            <TaskCard key={task.id} task={task} user={user} index={index + 1} authorAnimation={animation} />
+            <TaskCard 
+              key={task.id} 
+              task={task} 
+              user={user} 
+              index={index + 1} 
+              authorAnimation={animation} 
+              userProfiles={userProfiles}
+            />
           );
         })}
       </div>
