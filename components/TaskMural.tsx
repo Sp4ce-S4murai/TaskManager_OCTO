@@ -22,7 +22,8 @@ function mapTaskDocument(document: QueryDocumentSnapshot): Task {
     imageUrl: typeof data.imageUrl === "string" ? data.imageUrl : undefined,
     cardColor: typeof data.cardColor === "string" ? data.cardColor : undefined,
     timestamp: data.timestamp ?? null,
-    affiliates: Array.isArray(data.affiliates) ? data.affiliates : []
+    affiliates: Array.isArray(data.affiliates) ? data.affiliates : [],
+    privacy: (data.privacy === "private" || data.privacy === "public") ? data.privacy : "corporate"
   };
 }
 
@@ -81,6 +82,23 @@ export default function TaskMural({ user, filterUid }: { user: User, filterUid?:
     });
   }, []);
 
+  const visibleTasks = tasks.filter((task) => {
+    if (filterUid) {
+      // Profile view (authored by or affiliated to filterUid profile owner)
+      // Hide if private and current logged-in user is not the author
+      if (task.privacy === "private" && task.authorUid !== user.uid) {
+        return false;
+      }
+      return true;
+    } else {
+      // Main feed view
+      if (task.privacy === "corporate") return true;
+      if (task.privacy === "private") return task.authorUid === user.uid;
+      // public is hidden in feed
+      return false;
+    }
+  });
+
   return (
     <section className="mx-auto max-w-7xl px-4 py-5">
       {!filterUid && (
@@ -91,17 +109,17 @@ export default function TaskMural({ user, filterUid }: { user: User, filterUid?:
 
       <div className="mb-4 mt-6 flex items-center justify-between border-y border-terminal-green py-2 text-sm uppercase text-terminal-green shadow-[0_0_10px_rgba(0,255,65,0.05)]">
         <span>&gt; fluxo do mural</span>
-        <span className="text-terminal-green font-bold">{tasks.length} tarefas</span>
+        <span className="text-terminal-green font-bold">{visibleTasks.length} tarefas</span>
       </div>
 
       {loading ? <p className="border border-terminal-yellow p-4 uppercase text-terminal-yellow">carregando feed de tarefas...</p> : null}
       {error ? <p className="border border-terminal-red p-4 uppercase text-terminal-red">erro firestore: {error}</p> : null}
-      {!loading && !error && tasks.length === 0 ? (
+      {!loading && !error && visibleTasks.length === 0 ? (
         <p className="border border-terminal-yellow p-4 uppercase text-terminal-yellow">nenhuma tarefa encontrada no mainframe.</p>
       ) : null}
 
       <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {tasks.map((task, index) => {
+        {visibleTasks.map((task, index) => {
           const animation = task.authorUid ? (userProfiles[task.authorUid]?.cardAnimation || "none") : "none";
           return (
             <TaskCard 

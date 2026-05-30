@@ -5,6 +5,7 @@ import type { User } from "firebase/auth";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { Send } from "lucide-react";
 import { db } from "@/lib/firebase";
+import type { TaskPrivacy } from "@/lib/types";
 
 export default function TaskForm({ user }: { user: User }) {
   const [title, setTitle] = useState("");
@@ -14,6 +15,7 @@ export default function TaskForm({ user }: { user: User }) {
   const [submitting, setSubmitting] = useState(false);
 
   const [cardColor, setCardColor] = useState("terminal-green");
+  const [privacy, setPrivacy] = useState<TaskPrivacy>("corporate");
 
   const colors = [
     { id: "terminal-green", hex: "bg-terminal-green" },
@@ -55,12 +57,14 @@ export default function TaskForm({ user }: { user: User }) {
         checklist: checklistItems,
         imageUrl: null,
         cardColor: cardColor,
+        privacy: privacy,
         timestamp: serverTimestamp()
       });
 
       setTitle("");
       setDescription("");
       setChecklistInput("");
+      setPrivacy("corporate");
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Falha ao criar tarefa.");
     } finally {
@@ -70,7 +74,7 @@ export default function TaskForm({ user }: { user: User }) {
 
   return (
     <form onSubmit={handleSubmit} className="border border-terminal-green p-4 shadow-[0_0_10px_rgba(0,255,65,0.05)]">
-      <div className="grid gap-4 lg:grid-cols-[1fr_1fr_1fr_auto]">
+      <div className="grid gap-4 lg:grid-cols-[1fr_1fr_1fr_1fr_auto]">
         <label className="block">
           <span className="mb-2 block text-sm uppercase text-terminal-green">&gt; criar tarefa</span>
           <input
@@ -103,6 +107,19 @@ export default function TaskForm({ user }: { user: User }) {
             placeholder="item 1, item 2..."
             maxLength={300}
           />
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block text-sm uppercase text-terminal-green">&gt; privacidade</span>
+          <select
+            className="w-full px-3 py-3 border border-terminal-green focus:ring-0 focus:border-terminal-green text-terminal-green bg-black select-custom uppercase font-bold"
+            value={privacy}
+            onChange={(event) => setPrivacy(event.target.value as TaskPrivacy)}
+          >
+            <option value="corporate" className="bg-black text-terminal-green uppercase">👥 Corporativo</option>
+            <option value="public" className="bg-black text-terminal-green uppercase">🌐 Público</option>
+            <option value="private" className="bg-black text-terminal-green uppercase">🔒 Privado</option>
+          </select>
         </label>
 
         <div className="flex flex-col gap-2">

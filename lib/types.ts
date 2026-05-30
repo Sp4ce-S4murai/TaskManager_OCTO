@@ -17,6 +17,8 @@ export interface ChecklistItem {
   isDone: boolean;
 }
 
+export type TaskPrivacy = "private" | "corporate" | "public";
+
 export interface Task {
   id: string;
   title: string;
@@ -29,6 +31,7 @@ export interface Task {
   cardColor?: string;
   timestamp: Timestamp | null;
   affiliates?: string[];
+  privacy?: TaskPrivacy;
 }
 
 export interface Comment {

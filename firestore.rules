@@ -30,7 +30,7 @@ service cloud.firestore {
         && request.resource.data.authorEmail == request.auth.token.email
         && request.resource.data.timestamp == request.time;
       allow update: if signedIn()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "checklist", "affiliates"])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "checklist", "affiliates", "privacy"])
         && request.resource.data.status in ["todo", "done"];
       allow delete: if signedIn();
 

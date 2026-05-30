@@ -135,6 +135,9 @@ export default function TaskCard({
             <p className="text-xs uppercase opacity-60" style={{ color: colorHex }}>
               hora: {formatTimestamp(task)}
             </p>
+            <p className="text-xs uppercase opacity-60 mt-0.5" style={{ color: colorHex }}>
+              privacidade: {task.privacy === "private" ? "🔒 Privado" : task.privacy === "public" ? "🌐 Público" : "👥 Corporativo"}
+            </p>
             {task.affiliates && task.affiliates.length > 0 && (
               <p className="text-xs uppercase mt-1.5" style={{ color: colorHex }}>
                 afiliados:{" "}
