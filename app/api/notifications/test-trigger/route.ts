@@ -30,10 +30,14 @@ export async function POST(request: Request) {
         } else {
           // Escaped message text according to Telegram MarkdownV2 requirements
           const testMessage =
-            "🚨 *ALERTA DE SISTEMA: TASKMANAGER\\_OCTO* 🚨\n\n" +
-            "Olá\\! Este é um teste oficial de notificação do seu terminal de produtividade\\.\n\n" +
-            "*A procrastinação destrói sua produtividade\\!*\n" +
-            "Não adie suas obrigações\\. Complete suas tarefas a tempo\\! Foco total\\.";
+            "```\n" +
+            "⬡───[ SINAL: ALERTA DE SISTEMA ]───⬡\n" +
+            "  MAINFRAME: TASKMANAGER_OCTO\n\n" +
+            "  MENSAGEM: Teste de barramento ativo.\n" +
+            "  DIRETRIZ: A procrastinação gera desordem.\n" +
+            "  [ STATUS: CANAL INTEGRADO DE ALERTA ]\n" +
+            "⬡───────────────────────────────────⬡\n" +
+            "```";
 
           try {
             const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {

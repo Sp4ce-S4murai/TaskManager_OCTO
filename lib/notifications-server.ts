@@ -84,38 +84,57 @@ export async function notifyTaskEvent(
   }
 
   // 4. Format message based on action
-  const taskTitleEscaped = escapeMarkdownV2(task.title);
-  let messageText = "";
+  const cleanTitle = (task.title || "").replace(/\`/g, "'");
+  const sourceStr = isActorAssignee ? "NÚCLEO INDIVIDUAL" : "OPERADOR EXTERNO";
 
   switch (action) {
     case "create":
-      messageText = isActorAssignee
-        ? `📅 *Tarefa criada e designada a você\\!* \n\nA tarefa *${taskTitleEscaped}* foi adicionada e designada a si mesmo\\.`
-        : `📅 *Nova tarefa atribuída\\!* \n\nA tarefa *${taskTitleEscaped}* foi designada a você por outro operador\\.`;
+      messageText = "```\n" +
+                    "⬡───[ CÓDICE: NOVO VETOR ]───⬡\n" +
+                    "  EVENTO: TAREFA INVOCADA\n" +
+                    `  ALVO: ${cleanTitle}\n` +
+                    `  FONTE: ${sourceStr}\n` +
+                    "  DIRETRIZ: Executar sem deriva.\n" +
+                    "  STATUS: PENDENTE (TODO) ○\n" +
+                    "⬡───────────────────────────⬡\n" +
+                    "```";
       break;
 
     case "update":
-      messageText = isActorAssignee
-        ? `✏️ *Tarefa atualizada por você\\!* \n\nAs informações da sua tarefa *${taskTitleEscaped}* foram editadas por você\\.`
-        : `✏️ *Tarefa atualizada\\!* \n\nAs informações da sua tarefa *${taskTitleEscaped}* foram editadas por outro operador\\.`;
+      messageText = "```\n" +
+                    "⬡───[ CÓDICE: FLUXO REFORMADO ]───⬡\n" +
+                    "  EVENTO: TAREFA ALTERADA\n" +
+                    `  ALVO: ${cleanTitle}\n` +
+                    `  FONTE: ${sourceStr}\n` +
+                    "  DIRETRIZ: O destino foi reescrito.\n" +
+                    "⬡─────────────────────────────────⬡\n" +
+                    "```";
       break;
 
     case "delete":
-      messageText = isActorAssignee
-        ? `🗑️ *Tarefa excluída por você\\!* \n\nSua tarefa *${taskTitleEscaped}* foi removida do mainframe por você\\.`
-        : `🗑️ *Tarefa excluída\\!* \n\nSua tarefa *${taskTitleEscaped}* foi removida do mainframe por outro operador\\.`;
+      messageText = "```\n" +
+                    "⬡───[ CÓDICE: PURGA DE ENTIDADE ]───⬡\n" +
+                    "  EVENTO: TAREFA EXPULSADA\n" +
+                    `  ALVO: ${cleanTitle}\n` +
+                    `  FONTE: ${sourceStr}\n` +
+                    "  DIRETRIZ: Removida do mainframe ativo.\n" +
+                    "  STATUS: PURGADA █\n" +
+                    "⬡─────────────────────────────────⬡\n" +
+                    "```";
       break;
 
     case "status_change":
-      const newStatus = task.status === "done" ? "FEITO" : "PENDENTE";
-      const statusEscaped = escapeMarkdownV2(newStatus);
-      if (isActorAssignee) {
-        messageText = `🔔 *Confirmação de Status* \n\n` +
-                      `Você alterou o status da sua tarefa *${taskTitleEscaped}* para *${statusEscaped}*\\.`;
-      } else {
-        messageText = `🚨 *Status Alterado\\!* \n\n` +
-                      `O status da sua tarefa *${taskTitleEscaped}* foi alterado para *${statusEscaped}* por outro operador\\.`;
-      }
+      const isDone = task.status === "done";
+      const statusStr = isDone ? "CONCLUÍDO (DONE) ●" : "PENDENTE (TODO) ○";
+      messageText = "```\n" +
+                    "⬡───[ CÓDICE: MUTAÇÃO DE ESTADO ]───⬡\n" +
+                    "  EVENTO: ALTERAÇÃO DE STATUS\n" +
+                    `  ALVO: ${cleanTitle}\n` +
+                    `  FONTE: ${sourceStr}\n` +
+                    `  ESTADO: ${statusStr}\n` +
+                    `  DIRETRIZ: Entropia recalibrada.\n` +
+                    "⬡─────────────────────────────────⬡\n" +
+                    "```";
       break;
   }
 

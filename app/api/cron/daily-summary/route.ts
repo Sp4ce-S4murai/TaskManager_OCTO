@@ -125,51 +125,54 @@ async function handleDailySummary(request: Request) {
       }
 
       // Format unified Telegram message in MarkdownV2
-      let message = `📋 *RELATÓRIO DIÁRIO DE PENDÊNCIAS* 📋\n\n` +
-                    `Olá\\! Aqui está o sumário de suas tarefas no terminal de controle\\:\n\n`;
+      let message = "```\n" +
+                    "⬡───[ CÓDICE: DIÁRIO DE PENDÊNCIAS ]───⬡\n" +
+                    "  MAINFRAME: Tarefas ativas localizadas\n\n";
 
       let hasContent = false;
 
       if (overdueTasks.length > 0) {
         hasContent = true;
-        message += `🚨 *Tarefas Atrasadas:*\n`;
+        message += "  🚨 ATRASADAS (ENTROPIA CRÍTICA):\n";
         for (const t of overdueTasks) {
-          const titleEscaped = escapeMarkdownV2(t.title);
+          const cleanTitle = (t.title || "").replace(/\`/g, "'");
           const deadlineVal = t.dueDate || t.deadline;
           const dateStr = formatDateDisplay(deadlineVal);
-          message += `• ${titleEscaped} \\(Prazo: ${escapeMarkdownV2(dateStr)}\\)\n`;
+          message += `  • ${cleanTitle} (Prazo: ${dateStr})\n`;
         }
-        message += `\n`;
+        message += "\n";
       }
 
       if (todayTasks.length > 0) {
         hasContent = true;
-        message += `⚠️ *Tarefas para Hoje:*\n`;
+        message += "  ⚠️ CICLO ATIVO (ATUAL):\n";
         for (const t of todayTasks) {
-          const titleEscaped = escapeMarkdownV2(t.title);
-          message += `• ${titleEscaped}\n`;
+          const cleanTitle = (t.title || "").replace(/\`/g, "'");
+          message += `  • ${cleanTitle}\n`;
         }
-        message += `\n`;
+        message += "\n";
       }
 
       if (futureTasks.length > 0) {
         hasContent = true;
-        message += `📅 *Outras Tarefas Pendentes:*\n`;
+        message += "  ⚙️ FUTURAS (PLANEJADO):\n";
         for (const t of futureTasks) {
-          const titleEscaped = escapeMarkdownV2(t.title);
+          const cleanTitle = (t.title || "").replace(/\`/g, "'");
           const deadlineVal = t.dueDate || t.deadline;
           if (deadlineVal) {
             const dateStr = formatDateDisplay(deadlineVal);
-            message += `• ${titleEscaped} \\(Prazo: ${escapeMarkdownV2(dateStr)}\\)\n`;
+            message += `  • ${cleanTitle} (Prazo: ${dateStr})\n`;
           } else {
-            message += `• ${titleEscaped}\n`;
+            message += `  • ${cleanTitle}\n`;
           }
         }
-        message += `\n`;
+        message += "\n";
       }
 
       if (hasContent) {
-        message += `Foco total e mãos à obra\\! Procrastinar atrasa o mainframe\\! 🚀`;
+        message += "  [ DIRETRIZ: Elimine as derivas temporais. ]\n" +
+                   "⬡───────────────────────────────────⬡\n" +
+                   "```";
         const sent = await sendTelegramMessage(telegramChatId, message);
         if (sent) {
           summarySentCount++;
