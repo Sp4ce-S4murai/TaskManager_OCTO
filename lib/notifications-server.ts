@@ -1,4 +1,4 @@
-import { adminDb } from "@/lib/firebase-admin";
+import { getAdminDb } from "@/lib/firebase-admin";
 
 /**
  * Escapes characters that are reserved by Telegram's MarkdownV2 formatting.
@@ -74,7 +74,7 @@ export async function notifyTaskEvent(
   // 3. Resolve the assignee's profile to check if they have a Telegram Chat ID configured
   let telegramChatId: string | null = null;
   try {
-    const docSnap = await adminDb.collection("users").doc(assigneeId).get();
+    const docSnap = await getAdminDb().collection("users").doc(assigneeId).get();
     if (docSnap.exists) {
       const profile = docSnap.data();
       telegramChatId = profile?.telegram_chat_id ?? null;

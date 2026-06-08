@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
+import { getAdminDb } from "@/lib/firebase-admin";
 import { sendTelegramMessage, escapeMarkdownV2 } from "@/lib/notifications-server";
+
+// Prevent Next.js from pre-rendering this route at build time
+export const dynamic = "force-dynamic";
 
 // Helper to parse dates from various formats
 function parseDate(val: any): Date | null {
@@ -44,10 +47,10 @@ async function handleDailySummary(request: Request) {
     console.log("[Cron] Iniciando execução do cron de resumo diário...");
 
     // 2. Fetch all tasks and all users using Admin SDK
-    const tasksSnapshot = await adminDb.collection("tasks").get();
+    const tasksSnapshot = await getAdminDb().collection("tasks").get();
     const allTasks: any[] = tasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    const usersSnapshot = await adminDb.collection("users").get();
+    const usersSnapshot = await getAdminDb().collection("users").get();
     const allUsers: any[] = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     console.log(`[Cron] Encontradas ${allTasks.length} tasks e ${allUsers.length} usuários.`);

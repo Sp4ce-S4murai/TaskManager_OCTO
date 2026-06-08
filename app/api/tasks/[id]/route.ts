@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/firebase-server";
-import { adminDb } from "@/lib/firebase-admin";
+import { getAdminDb } from "@/lib/firebase-admin";
 import { notifyTaskEvent } from "@/lib/notifications-server";
 
 export async function PUT(
@@ -20,7 +20,7 @@ export async function PUT(
     const body = await request.json();
 
     // 3. Fetch the existing task to verify details and compare changes
-    const docRef = adminDb.collection("tasks").doc(taskId);
+    const docRef = getAdminDb().collection("tasks").doc(taskId);
     const docSnap = await docRef.get();
     if (!docSnap.exists) {
       return NextResponse.json({ error: "Tarefa não encontrada." }, { status: 404 });
@@ -93,7 +93,7 @@ export async function DELETE(
     const uid = await verifyAuth(request);
 
     // 2. Fetch task details before deletion (needed to extract title and assignee for notification)
-    const docRef = adminDb.collection("tasks").doc(taskId);
+    const docRef = getAdminDb().collection("tasks").doc(taskId);
     const docSnap = await docRef.get();
     if (!docSnap.exists) {
       return NextResponse.json({ error: "Tarefa não encontrada." }, { status: 404 });

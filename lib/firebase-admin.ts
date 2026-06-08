@@ -1,9 +1,16 @@
 import admin from "firebase-admin";
 
-const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+/**
+ * Initializes the Firebase Admin SDK lazily (on first call, not at import time).
+ * This prevents build-time crashes when env vars are unavailable during Next.js
+ * "Collecting page data" phase.
+ */
+function ensureInitialized(): void {
+  if (admin.apps.length) return;
 
-if (!admin.apps.length) {
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+
   if (!clientEmail || !privateKey) {
     throw new Error(
       "Erro de autenticação: Credenciais administrativas do Firestore não configuradas no Vercel (verifique as variáveis de ambiente FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY)."
@@ -19,5 +26,13 @@ if (!admin.apps.length) {
   });
 }
 
-export const adminDb = admin.firestore();
+/**
+ * Returns the Firestore Admin instance, initializing the SDK on first call.
+ */
+export function getAdminDb(): admin.firestore.Firestore {
+  ensureInitialized();
+  return admin.firestore();
+}
+
 export { admin };
+

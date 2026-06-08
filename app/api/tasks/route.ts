@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/firebase-server";
-import { adminDb, admin } from "@/lib/firebase-admin";
+import { getAdminDb, admin } from "@/lib/firebase-admin";
 import { notifyTaskEvent } from "@/lib/notifications-server";
 
 export async function POST(request: Request) {
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     };
 
     // 4. Save to Firestore via Admin SDK
-    const docRef = await adminDb.collection("tasks").add(taskData);
+    const docRef = await getAdminDb().collection("tasks").add(taskData);
 
     // Retrieve the created task from Firestore to have the resolved server timestamp
     const taskSnap = await docRef.get();
