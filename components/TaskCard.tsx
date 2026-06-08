@@ -3,11 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { User } from "firebase/auth";
-import { doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { CheckSquare, Square, Trash2, UserPlus, UserMinus } from "lucide-react";
 import CommentSection from "@/components/CommentSection";
 import CardAnimations from "@/components/CardAnimations";
-import { db } from "@/lib/firebase";
 import type { Task, UserProfile } from "@/lib/types";
 
 // Color definitions using inline styles so Tailwind purge is irrelevant
@@ -32,6 +30,67 @@ function formatTimestamp(task: Task) {
     dateStyle: "short",
     timeStyle: "short",
   });
+}
+
+function parseDate(val: any): Date | null {
+  if (!val) return null;
+  if (typeof val === "string") {
+    const parts = val.split("-");
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      return new Date(year, month, day);
+    }
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) return d;
+  }
+  return null;
+}
+
+function getDeadlineColor(dueDateStr: string, isDone: boolean): string {
+  if (isDone) return "#333333";
+  const deadlineDate = parseDate(dueDateStr);
+  if (!deadlineDate) return "#00FF41";
+
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+  if (deadlineDate < todayStart) {
+    return "#FF003C"; // Red for overdue
+  } else if (deadlineDate >= todayStart && deadlineDate <= todayEnd) {
+    return "#FFFF00"; // Yellow for today
+  } else {
+    return "#00FFFF"; // Cyan for future
+  }
+}
+
+function getDeadlineEmoji(dueDateStr: string, isDone: boolean): string {
+  if (isDone) return "✅";
+  const deadlineDate = parseDate(dueDateStr);
+  if (!deadlineDate) return "📅";
+
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+  if (deadlineDate < todayStart) {
+    return "🚨";
+  } else if (deadlineDate >= todayStart && deadlineDate <= todayEnd) {
+    return "⚠️";
+  } else {
+    return "📅";
+  }
+}
+
+function formatDateDisplay(dueDateStr: string): string {
+  const d = parseDate(dueDateStr);
+  if (!d) return dueDateStr;
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
 }
 
 export default function TaskCard({
@@ -59,20 +118,62 @@ export default function TaskCard({
       ? (task.affiliates ?? []).filter((uid) => uid !== user.uid)
       : [...(task.affiliates ?? []), user.uid];
 
-    await updateDoc(doc(db, "tasks", task.id), {
-      affiliates: newAffiliates,
-    });
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ affiliates: newAffiliates }),
+      });
+      if (!response.ok) {
+        throw new Error("Falha ao atualizar afiliação da tarefa.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao afiliar-se na tarefa.");
+    }
   };
 
   const toggleStatus = async () => {
-    await updateDoc(doc(db, "tasks", task.id), {
-      status: isDone ? "todo" : "done",
-    });
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ status: isDone ? "todo" : "done" }),
+      });
+      if (!response.ok) {
+        throw new Error("Falha ao atualizar status da tarefa.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao alterar o status da tarefa.");
+    }
   };
 
   const handleDelete = async () => {
     if (window.confirm(`Deletar tarefa #${index} "${task.title}"?`)) {
-      await deleteDoc(doc(db, "tasks", task.id));
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(`/api/tasks/${task.id}`, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${idToken}`,
+          },
+        });
+        if (!response.ok) {
+          throw new Error("Falha ao excluir a tarefa.");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao excluir a tarefa.");
+      }
     }
   };
 
@@ -83,7 +184,23 @@ export default function TaskCard({
       ...newChecklist[itemIndex],
       isDone: !newChecklist[itemIndex].isDone,
     };
-    await updateDoc(doc(db, "tasks", task.id), { checklist: newChecklist });
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ checklist: newChecklist }),
+      });
+      if (!response.ok) {
+        throw new Error("Falha ao atualizar item do checklist.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao atualizar item do checklist.");
+    }
   };
 
   return (
@@ -138,6 +255,19 @@ export default function TaskCard({
             <p className="text-xs uppercase opacity-60 mt-0.5" style={{ color: colorHex }}>
               privacidade: {task.privacy === "private" ? "🔒 Privado" : task.privacy === "public" ? "🌐 Público" : "👥 Corporativo"}
             </p>
+            {task.assignedTo && (
+              <p className="text-xs uppercase mt-1" style={{ color: colorHex }}>
+                designado para:{" "}
+                <span className="font-bold text-white bg-black px-1.5 py-0.5 border border-[#00FF41]/25 text-[10px]">
+                  👤 {userProfiles[task.assignedTo]?.name || userProfiles[task.assignedTo]?.email || "desconhecido"}
+                </span>
+              </p>
+            )}
+            {task.dueDate && (
+              <p className="text-xs uppercase mt-1 flex items-center gap-1 font-mono font-bold" style={{ color: getDeadlineColor(task.dueDate, isDone) }}>
+                {getDeadlineEmoji(task.dueDate, isDone)} prazo: {formatDateDisplay(task.dueDate)}
+              </p>
+            )}
             {task.affiliates && task.affiliates.length > 0 && (
               <p className="text-xs uppercase mt-1.5" style={{ color: colorHex }}>
                 afiliados:{" "}

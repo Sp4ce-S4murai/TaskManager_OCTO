@@ -103,7 +103,7 @@ export default function TaskMural({ user, filterUid }: { user: User, filterUid?:
     <section className="mx-auto max-w-7xl px-4 py-5">
       {!filterUid && (
         <div className="mb-6">
-          <TaskForm user={user} />
+          <TaskForm user={user} userProfiles={userProfiles} />
         </div>
       )}
 

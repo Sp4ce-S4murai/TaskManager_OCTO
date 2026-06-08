@@ -36,6 +36,8 @@ export interface Task {
   timestamp: Timestamp | null;
   affiliates?: string[];
   privacy?: TaskPrivacy;
+  assignedTo?: string | null;
+  dueDate?: string | null;
 }
 
 export interface Comment {
