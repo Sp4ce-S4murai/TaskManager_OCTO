@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { verifyAuth, getBackendFirestoreToken, getTaskServer, updateTaskServer, deleteTaskServer } from "@/lib/firebase-server";
+import { verifyAuth } from "@/lib/firebase-server";
+import { adminDb } from "@/lib/firebase-admin";
 import { notifyTaskEvent } from "@/lib/notifications-server";
 
 export async function PUT(
@@ -18,20 +19,13 @@ export async function PUT(
     // 2. Parse payload
     const body = await request.json();
 
-    // 3. Obtain administrative token for Firestore REST queries
-    const serverToken = await getBackendFirestoreToken();
-    if (!serverToken) {
-      return NextResponse.json(
-        { error: "Erro de autenticação: Credenciais administrativas do Firestore não configuradas no Vercel (verifique as variáveis de ambiente FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY ou CRON_SYSTEM_EMAIL/CRON_SYSTEM_PASSWORD no dashboard da Vercel)." },
-        { status: 500 }
-      );
-    }
-
-    // 4. Fetch the existing task to verify details and compare changes
-    const existingTask = await getTaskServer(taskId, serverToken);
-    if (!existingTask) {
+    // 3. Fetch the existing task to verify details and compare changes
+    const docRef = adminDb.collection("tasks").doc(taskId);
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) {
       return NextResponse.json({ error: "Tarefa não encontrada." }, { status: 404 });
     }
+    const existingTask = { id: docSnap.id, ...docSnap.data() } as any;
 
     // Determine the action type: status_change vs update
     let action: "status_change" | "update" = "update";
@@ -59,13 +53,13 @@ export async function PUT(
       }
     }
 
-    // 5. Update in Firestore
-    const updatedFields = await updateTaskServer(taskId, updateData, serverToken);
+    // 4. Update in Firestore via Admin SDK
+    await docRef.update(updateData);
 
     // Merge changes with old task to ensure full task representation for notifications
-    const mergedTask = { ...existingTask, ...updatedFields };
+    const mergedTask = { ...existingTask, ...updateData };
 
-    // 6. Notify assignee
+    // 5. Notify assignee
     await notifyTaskEvent(action, mergedTask, uid);
 
     return NextResponse.json({
@@ -98,25 +92,18 @@ export async function DELETE(
     // 1. Authenticate client user
     const uid = await verifyAuth(request);
 
-    // 2. Obtain administrative token
-    const serverToken = await getBackendFirestoreToken();
-    if (!serverToken) {
-      return NextResponse.json(
-        { error: "Erro de autenticação: Credenciais administrativas do Firestore não configuradas no Vercel (verifique as variáveis de ambiente FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY ou CRON_SYSTEM_EMAIL/CRON_SYSTEM_PASSWORD no dashboard da Vercel)." },
-        { status: 500 }
-      );
-    }
-
-    // 3. Fetch task details before deletion (needed to extract title and assignee for notification)
-    const existingTask = await getTaskServer(taskId, serverToken);
-    if (!existingTask) {
+    // 2. Fetch task details before deletion (needed to extract title and assignee for notification)
+    const docRef = adminDb.collection("tasks").doc(taskId);
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) {
       return NextResponse.json({ error: "Tarefa não encontrada." }, { status: 404 });
     }
+    const existingTask = { id: docSnap.id, ...docSnap.data() } as any;
 
-    // 4. Delete from Firestore
-    await deleteTaskServer(taskId, serverToken);
+    // 3. Delete from Firestore via Admin SDK
+    await docRef.delete();
 
-    // 5. Notify assignee
+    // 4. Notify assignee
     await notifyTaskEvent("delete", existingTask, uid);
 
     return NextResponse.json({

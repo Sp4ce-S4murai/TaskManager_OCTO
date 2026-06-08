@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { verifyAuth, getBackendFirestoreToken, createTaskServer } from "@/lib/firebase-server";
+import { verifyAuth } from "@/lib/firebase-server";
+import { adminDb, admin } from "@/lib/firebase-admin";
 import { notifyTaskEvent } from "@/lib/notifications-server";
 
 export async function POST(request: Request) {
@@ -15,15 +16,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "O título da tarefa é obrigatório." }, { status: 400 });
     }
 
-    // 3. Obtain administrative token for Firestore REST writes
-    const serverToken = await getBackendFirestoreToken();
-    if (!serverToken) {
-      return NextResponse.json(
-        { error: "Erro de autenticação: Credenciais administrativas do Firestore não configuradas no Vercel (verifique as variáveis de ambiente FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY ou CRON_SYSTEM_EMAIL/CRON_SYSTEM_PASSWORD no dashboard da Vercel)." },
-        { status: 500 }
-      );
-    }
-
     const taskData: any = {
       title: title.trim(),
       description: (description || "").trim(),
@@ -34,14 +26,18 @@ export async function POST(request: Request) {
       imageUrl: null,
       cardColor: cardColor || "terminal-green",
       privacy: privacy || "corporate",
-      timestamp: new Date(),
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
       assignedTo: assignedTo || null,
       dueDate: dueDate || null,
       affiliates: [],
     };
 
-    // 4. Save to Firestore
-    const createdTask = await createTaskServer(taskData, serverToken);
+    // 4. Save to Firestore via Admin SDK
+    const docRef = await adminDb.collection("tasks").add(taskData);
+
+    // Retrieve the created task from Firestore to have the resolved server timestamp
+    const taskSnap = await docRef.get();
+    const createdTask = { id: docRef.id, ...taskSnap.data() };
 
     // 5. Trigger reactive Telegram notification to the assignee
     await notifyTaskEvent("create", createdTask, uid);

@@ -1,4 +1,4 @@
-import { getUserSettings, getBackendFirestoreToken } from "@/lib/firebase-server";
+import { adminDb } from "@/lib/firebase-admin";
 
 /**
  * Escapes characters that are reserved by Telegram's MarkdownV2 formatting.
@@ -74,12 +74,12 @@ export async function notifyTaskEvent(
   // 3. Resolve the assignee's profile to check if they have a Telegram Chat ID configured
   let telegramChatId: string | null = null;
   try {
-    const token = await getBackendFirestoreToken();
-    if (token) {
-      const profile = await getUserSettings(assigneeId, token);
+    const docSnap = await adminDb.collection("users").doc(assigneeId).get();
+    if (docSnap.exists) {
+      const profile = docSnap.data();
       telegramChatId = profile?.telegram_chat_id ?? null;
     } else {
-      console.error("[Notification] Não foi possível autenticar no Firestore para buscar o perfil do destinatário.");
+      console.warn(`[Notification] Usuário atribuído "${assigneeId}" não possui documento de configurações.`);
     }
   } catch (err: any) {
     console.error(`[Notification] Erro ao carregar configurações do usuário atribuído (${assigneeId}):`, err.message);

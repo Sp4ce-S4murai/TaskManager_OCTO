@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { getBackendFirestoreToken, getTasksServer, getUsersServer } from "@/lib/firebase-server";
+import { adminDb } from "@/lib/firebase-admin";
 import { sendTelegramMessage, escapeMarkdownV2 } from "@/lib/notifications-server";
 
 // Helper to parse dates from various formats
 function parseDate(val: any): Date | null {
   if (!val) return null;
-  // If it's a Firestore REST timestamp object
   if (typeof val === "object") {
+    if (typeof val.toDate === "function") return val.toDate();
     if ("seconds" in val) return new Date(Number(val.seconds) * 1000);
     if ("_seconds" in val) return new Date(Number(val._seconds) * 1000);
     if ("timestampValue" in val) return new Date(val.timestampValue);
@@ -43,16 +43,12 @@ async function handleDailySummary(request: Request) {
 
     console.log("[Cron] Iniciando execução do cron de resumo diário...");
 
-    // 2. Obtain backend token for Firestore REST queries
-    const token = await getBackendFirestoreToken();
-    if (!token) {
-      console.error("[Cron] Falha ao autenticar o backend com o Firestore.");
-      return NextResponse.json({ error: "Erro de autenticação no banco de dados." }, { status: 500 });
-    }
+    // 2. Fetch all tasks and all users using Admin SDK
+    const tasksSnapshot = await adminDb.collection("tasks").get();
+    const allTasks = tasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    // 3. Fetch all tasks and all users
-    const allTasks = await getTasksServer(token);
-    const allUsers = await getUsersServer(token);
+    const usersSnapshot = await adminDb.collection("users").get();
+    const allUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     console.log(`[Cron] Encontradas ${allTasks.length} tasks e ${allUsers.length} usuários.`);
 
