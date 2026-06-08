@@ -86,6 +86,7 @@ export async function notifyTaskEvent(
   // 4. Format message based on action
   const cleanTitle = (task.title || "").replace(/\`/g, "'");
   const sourceStr = isActorAssignee ? "NÚCLEO INDIVIDUAL" : "OPERADOR EXTERNO";
+  let messageText = "";
 
   switch (action) {
     case "create":
