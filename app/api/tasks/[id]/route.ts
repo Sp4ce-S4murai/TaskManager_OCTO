@@ -45,6 +45,7 @@ export async function PUT(
       "assignedTo",
       "dueDate",
       "affiliates",
+      "priority",
     ];
 
     for (const key of updateableKeys) {

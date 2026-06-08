@@ -22,6 +22,7 @@ export default function TaskForm({
 
   const [cardColor, setCardColor] = useState("terminal-green");
   const [privacy, setPrivacy] = useState<TaskPrivacy>("corporate");
+  const [priority, setPriority] = useState("medium");
 
   const colors = [
     { id: "terminal-green", hex: "bg-terminal-green" },
@@ -71,6 +72,7 @@ export default function TaskForm({
           assignedTo: assignedTo || null,
           dueDate: dueDate || null,
           authorEmail: user.email ?? "desconhecido",
+          priority: priority,
         }),
       });
 
@@ -85,6 +87,7 @@ export default function TaskForm({
       setAssignedTo("");
       setDueDate("");
       setPrivacy("corporate");
+      setPriority("medium");
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Falha ao criar tarefa.");
     } finally {
@@ -171,6 +174,20 @@ export default function TaskForm({
             <option value="corporate" className="bg-black text-terminal-green">👥 Corporativo</option>
             <option value="public" className="bg-black text-terminal-green">🌐 Público</option>
             <option value="private" className="bg-black text-terminal-green">🔒 Privado</option>
+          </select>
+        </label>
+
+        {/* Priority */}
+        <label className="block">
+          <span className="mb-2 block text-xs uppercase tracking-widest text-terminal-green font-mono font-bold">&gt; prioridade</span>
+          <select
+            className="w-full px-3 py-2 border border-terminal-green focus:outline-none focus:ring-1 focus:ring-terminal-green focus:border-terminal-green text-terminal-green bg-black font-mono text-sm uppercase font-bold select-custom"
+            value={priority}
+            onChange={(event) => setPriority(event.target.value)}
+          >
+            <option value="low" className="bg-black text-terminal-green">▼ Baixa</option>
+            <option value="medium" className="bg-black text-terminal-green">◆ Média</option>
+            <option value="high" className="bg-black text-terminal-green">█ Alta</option>
           </select>
         </label>
       </div>

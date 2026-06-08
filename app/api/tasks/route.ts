@@ -10,7 +10,7 @@ export async function POST(request: Request) {
 
     // 2. Parse payload
     const body = await request.json();
-    const { title, description, checklist, cardColor, privacy, assignedTo, dueDate, authorEmail } = body;
+    const { title, description, checklist, cardColor, privacy, assignedTo, dueDate, authorEmail, priority } = body;
 
     if (!title || typeof title !== "string" || title.trim().length === 0) {
       return NextResponse.json({ error: "O título da tarefa é obrigatório." }, { status: 400 });
@@ -30,6 +30,7 @@ export async function POST(request: Request) {
       assignedTo: assignedTo || null,
       dueDate: dueDate || null,
       affiliates: [],
+      priority: priority || "medium",
     };
 
     // 4. Save to Firestore via Admin SDK

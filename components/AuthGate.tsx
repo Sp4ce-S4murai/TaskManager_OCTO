@@ -133,30 +133,6 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{ user, logout: handleLogout }}>
       <main className="min-h-screen bg-terminal-black text-terminal-green">
-        <header className="sticky top-0 z-10 border-b border-terminal-green bg-terminal-black px-4 py-3 shadow-[0_4px_20px_rgba(0,255,255,0.05)]">
-          <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-terminal-green">
-              <Link href={`/`} className="text-2xl font-bold uppercase tracking-normal hover:underline">OCTO TASK TERMINAL</Link>
-              <p className="text-sm uppercase text-terminal-yellow">sessão: {user.email}</p>
-            </div>
-            <div className="flex gap-2">
-              <Link
-                href={`/perfil/${user.uid}`}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 uppercase border border-terminal-green text-terminal-green hover:bg-terminal-green hover:text-terminal-black transition-colors"
-              >
-                meu perfil
-              </Link>
-              <button
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 uppercase border border-terminal-yellow text-terminal-yellow hover:bg-terminal-yellow hover:text-terminal-black transition-colors"
-                type="button"
-                onClick={() => void handleLogout()}
-              >
-                <LogOut aria-hidden className="h-4 w-4" />
-                sair
-              </button>
-            </div>
-          </div>
-        </header>
         {children}
       </main>
     </AuthContext.Provider>

@@ -38,6 +38,7 @@ export interface Task {
   privacy?: TaskPrivacy;
   assignedTo?: string | null;
   dueDate?: string | null;
+  priority?: "low" | "medium" | "high";
 }
 
 export interface Comment {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { User } from "firebase/auth";
@@ -109,6 +110,42 @@ export default function TaskCard({
   const isDone = task.status === "done";
   const color = getColor(task.cardColor);
   const colorHex = isDone ? "#333333" : color.hex;
+
+  const [newChecklistItem, setNewChecklistItem] = useState("");
+
+  const handleInlineAddChecklistItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newChecklistItem.trim()) return;
+
+    const newItem = {
+      id: Math.random().toString(36).substring(2, 11),
+      text: newChecklistItem.trim(),
+      isDone: false,
+    };
+
+    const newChecklist = [...(task.checklist || []), newItem];
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ checklist: newChecklist }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Falha ao adicionar item ao checklist.");
+      }
+
+      setNewChecklistItem("");
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao adicionar item ao checklist.");
+    }
+  };
 
   // Affiliation Logic
   const isAffiliated = task.affiliates?.includes(user.uid) ?? false;
@@ -255,6 +292,18 @@ export default function TaskCard({
             <p className="text-xs uppercase opacity-60 mt-0.5" style={{ color: colorHex }}>
               privacidade: {task.privacy === "private" ? "🔒 Privado" : task.privacy === "public" ? "🌐 Público" : "👥 Corporativo"}
             </p>
+            <p className="text-xs uppercase mt-0.5" style={{ color: colorHex }}>
+              prioridade:{" "}
+              <span className={`font-bold px-1.5 py-0.5 border text-[10px] ${
+                task.priority === "high" 
+                  ? "text-red-500 border-red-500 bg-red-950/20" 
+                  : task.priority === "low" 
+                    ? "text-blue-400 border-blue-400 bg-blue-950/20"
+                    : "text-yellow-500 border-yellow-500 bg-yellow-950/20"
+              }`}>
+                {task.priority === "high" ? "█ ALTA" : task.priority === "low" ? "▼ BAIXA" : "◆ MÉDIA"}
+              </span>
+            </p>
             {task.assignedTo && (
               <p className="text-xs uppercase mt-1" style={{ color: colorHex }}>
                 designado para:{" "}
@@ -368,37 +417,92 @@ export default function TaskCard({
         )}
 
         {/* Checklist */}
-        {task.checklist && task.checklist.length > 0 && (
-          <div className="mb-4 space-y-1.5">
-            <h3
-              className="text-xs font-bold uppercase mb-2 pb-1 opacity-50"
-              style={{ borderBottom: `1px solid ${colorHex}`, color: colorHex }}
-            >
-              &gt; checklist de operação
-            </h3>
-            {task.checklist.map((item, itemIndex) => (
-              <div key={item.id} className="flex items-start gap-2">
-                <button
-                  type="button"
-                  onClick={() => void toggleChecklistItem(itemIndex)}
-                  className="mt-0.5 shrink-0 transition-colors"
-                  style={{ color: item.isDone ? "#00FF41" : "#FFFF00" }}
-                >
-                  {item.isDone ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
-                </button>
-                <span
-                  className="text-sm"
-                  style={{
-                    color: item.isDone ? "#444" : "#00FF41cc",
-                    textDecoration: item.isDone ? "line-through" : "none",
-                  }}
-                >
-                  {item.text}
-                </span>
+        <div className="mb-4 space-y-1.5">
+          <h3
+            className="text-xs font-bold uppercase mb-2 pb-1 opacity-50 flex items-center justify-between"
+            style={{ borderBottom: `1px solid ${colorHex}`, color: colorHex }}
+          >
+            <span>&gt; checklist de operação</span>
+          </h3>
+
+          {/* Progress Bar */}
+          {task.checklist && task.checklist.length > 0 && (() => {
+            const doneCount = task.checklist.filter(item => item.isDone).length;
+            const totalCount = task.checklist.length;
+            const percentage = Math.round((doneCount / totalCount) * 100);
+            return (
+              <div className="mb-3">
+                <div className="flex justify-between items-center text-[10px] uppercase font-mono tracking-wider mb-1" style={{ color: colorHex }}>
+                  <span>subtarefas: {doneCount} de {totalCount} concluídas</span>
+                  <span>{percentage}%</span>
+                </div>
+                <div className="w-full bg-zinc-950 border border-zinc-800 h-1.5 relative overflow-hidden">
+                  <div 
+                    className="h-full transition-all duration-300"
+                    style={{ 
+                      width: `${percentage}%`, 
+                      backgroundColor: colorHex 
+                    }} 
+                  />
+                </div>
               </div>
-            ))}
-          </div>
-        )}
+            );
+          })()}
+
+          {/* Checklist Items */}
+          {task.checklist && task.checklist.map((item, itemIndex) => (
+            <div key={item.id} className="flex items-start gap-2">
+              <button
+                type="button"
+                onClick={() => void toggleChecklistItem(itemIndex)}
+                className="mt-0.5 shrink-0 transition-colors"
+                style={{ color: item.isDone ? "#00FF41" : "#FFFF00" }}
+              >
+                {item.isDone ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+              </button>
+              <span
+                className="text-sm break-all"
+                style={{
+                  color: item.isDone ? "#444" : "#00FF41cc",
+                  textDecoration: item.isDone ? "line-through" : "none",
+                }}
+              >
+                {item.text}
+              </span>
+            </div>
+          ))}
+
+          {/* Add Item Form */}
+          <form onSubmit={handleInlineAddChecklistItem} className="mt-3 flex gap-2">
+            <input
+              type="text"
+              placeholder="Nova subtarefa..."
+              value={newChecklistItem}
+              onChange={(e) => setNewChecklistItem(e.target.value)}
+              className="flex-1 bg-black border text-xs px-2 py-1 outline-none text-terminal-green placeholder-[#00FF41]/35 font-mono"
+              style={{ borderColor: `${colorHex}55` }}
+              maxLength={100}
+            />
+            <button
+              type="submit"
+              className="border px-2 py-1 text-xs uppercase font-mono font-bold transition-all hover:text-black"
+              style={{ 
+                borderColor: colorHex, 
+                color: colorHex,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = colorHex;
+                e.currentTarget.style.color = "#000";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+                e.currentTarget.style.color = colorHex;
+              }}
+            >
+              +
+            </button>
+          </form>
+        </div>
       </div>
 
       {/* Comment section */}
