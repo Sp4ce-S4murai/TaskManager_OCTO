@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { doc, onSnapshot, collection, query, where } from "firebase/firestore";
-import { LogOut, UserCircle, Search, Filter, PlusSquare, SlidersHorizontal, ClipboardList } from "lucide-react";
+import { LogOut, UserCircle, Search, Filter, PlusSquare, SlidersHorizontal, ClipboardList, Terminal } from "lucide-react";
 
 import { useAuth } from "@/lib/auth-context";
 import { db } from "@/lib/firebase";
@@ -168,7 +168,29 @@ export default function HomePage() {
       {/* RIGHT COLUMN: Sidebar de Controle Fixa */}
       <aside className="flex flex-col gap-6">
         
-        {/* 1. Card do Usuário (Topo) */}
+        {/* 0. Card de Identidade do Mainframe (Branding) */}
+        <div className="border border-terminal-green bg-black p-5 flex flex-col shadow-[0_0_15px_rgba(0,255,65,0.05)] relative overflow-hidden">
+          {/* Decorative Corner Borders */}
+          <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-terminal-green" />
+          <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-terminal-green" />
+          <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-terminal-green" />
+          <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-terminal-green" />
+
+          <div className="flex items-center gap-2 mb-2 text-terminal-green">
+            <Terminal className="w-5 h-5 shrink-0" />
+            <span className="text-sm font-bold uppercase tracking-widest font-mono">
+              OCTO TASK TERMINAL
+            </span>
+          </div>
+          
+          <div className="text-[10px] uppercase font-mono text-terminal-green/60 space-y-1">
+            <p>&gt; SISTEMA: OPERACIONAL</p>
+            <p>&gt; SUBSISTEMA: MAIN_FEED_v1.2</p>
+            <p>&gt; STATUS: CONEXÃO SEGURA</p>
+          </div>
+        </div>
+
+        {/* 1. Card do Usuário (Abaixo do Card do Projeto) */}
         <div className="border border-terminal-green bg-black p-5 flex flex-col items-center text-center shadow-[0_0_15px_rgba(0,255,65,0.05)] relative overflow-hidden">
           
           {/* Decorative Corner Borders */}
