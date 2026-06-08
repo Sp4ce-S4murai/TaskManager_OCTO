@@ -9,6 +9,10 @@ export interface UserProfile {
   bio?: string;
   avatar?: string;
   cardAnimation?: string;
+  telegram_chat_id?: string | null;
+  allow_browser_notifications?: boolean;
+  notify_before_hours?: number;
+  notify_overdue_daily?: boolean;
 }
 
 export interface ChecklistItem {

@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import ProfileHeader from "@/components/ProfileHeader";
+import NotificationSettings from "@/components/NotificationSettings";
 
 const TaskMural = dynamic(() => import("@/components/TaskMural"), {
   ssr: false,
@@ -17,9 +18,12 @@ export default function ProfilePage() {
 
   if (!user) return null;
 
+  const isCurrentUser = user.uid === profileUid;
+
   return (
-    <div className="flex flex-col">
-      <ProfileHeader profileUid={profileUid} isCurrentUser={user.uid === profileUid} />
+    <div className="flex flex-col gap-4">
+      <ProfileHeader profileUid={profileUid} isCurrentUser={isCurrentUser} />
+      {isCurrentUser && <NotificationSettings profileUid={profileUid} />}
       <TaskMural user={user} filterUid={profileUid} />
     </div>
   );
