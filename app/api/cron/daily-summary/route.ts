@@ -45,10 +45,10 @@ async function handleDailySummary(request: Request) {
 
     // 2. Fetch all tasks and all users using Admin SDK
     const tasksSnapshot = await adminDb.collection("tasks").get();
-    const allTasks = tasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const allTasks: any[] = tasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     const usersSnapshot = await adminDb.collection("users").get();
-    const allUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const allUsers: any[] = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     console.log(`[Cron] Encontradas ${allTasks.length} tasks e ${allUsers.length} usuários.`);
 
