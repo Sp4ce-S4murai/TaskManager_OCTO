@@ -24,6 +24,11 @@ export default function NotificationSettings({ profileUid }: NotificationSetting
   // Diagnostic log output on UI
   const [logs, setLogs] = useState<string[]>([]);
 
+  // Test states for simulator
+  const [testAction, setTestAction] = useState("system");
+  const [testActor, setTestActor] = useState("other");
+  const [testTaskStatus, setTestTaskStatus] = useState("todo");
+
   // Hook up Firestore real-time listener to populate/sync settings
   useEffect(() => {
     const unsub = onSnapshot(
@@ -132,13 +137,18 @@ export default function NotificationSettings({ profileUid }: NotificationSetting
 
       const idToken = await currentUser.getIdToken();
 
-      addLog("> Solicitando disparo na API /api/notifications/test-trigger...");
+      addLog(`> Solicitando disparo na API /api/notifications/test-trigger (evento: ${testAction})...`);
       const response = await fetch("/api/notifications/test-trigger", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${idToken}`,
         },
+        body: JSON.stringify({
+          action: testAction,
+          simulateActor: testActor,
+          taskStatus: testTaskStatus,
+        }),
       });
 
       const data = await response.json();
@@ -268,6 +278,68 @@ export default function NotificationSettings({ profileUid }: NotificationSetting
                   className="w-24 px-3 py-2 border border-terminal-green bg-[#000] text-terminal-green focus:border-terminal-yellow focus:ring-0 text-sm font-mono"
                 />
                 <span className="text-xs text-terminal-green/75 uppercase font-mono">horas antes do deadline</span>
+              </div>
+            </div>
+
+            {/* Seção de Testes de Notificação */}
+            <div className="border border-terminal-yellow/30 bg-black/40 p-4 space-y-4">
+              <h3 className="text-xs uppercase text-terminal-yellow font-bold flex items-center gap-1.5 font-mono">
+                <Send className="w-3.5 h-3.5 text-terminal-yellow" />
+                ⬡ Simulador de Eventos de Notificação
+              </h3>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Ação a ser testada */}
+                <div>
+                  <label className="block text-[10px] uppercase text-terminal-green/75 font-mono mb-1">
+                    Tipo de Evento
+                  </label>
+                  <select
+                    value={testAction}
+                    onChange={(e) => setTestAction(e.target.value)}
+                    className="w-full px-2 py-1.5 border border-terminal-green bg-black text-terminal-green text-xs font-mono select-custom uppercase font-bold"
+                  >
+                    <option value="system">SISTEMA: ALERTA GERAL</option>
+                    <option value="create">TAREFA: CRIADA / ATRIBUÍDA</option>
+                    <option value="update">TAREFA: ATUALIZADA</option>
+                    <option value="delete">TAREFA: EXCLUÍDA</option>
+                    <option value="status_change">TAREFA: ALTERAÇÃO DE STATUS</option>
+                  </select>
+                </div>
+
+                {/* Ator simulado */}
+                {testAction !== "system" && (
+                  <div>
+                    <label className="block text-[10px] uppercase text-terminal-green/75 font-mono mb-1">
+                      Quem executou a ação?
+                    </label>
+                    <select
+                      value={testActor}
+                      onChange={(e) => setTestActor(e.target.value)}
+                      className="w-full px-2 py-1.5 border border-terminal-green bg-black text-terminal-green text-xs font-mono select-custom uppercase font-bold"
+                    >
+                      <option value="other">OUTRO OPERADOR</option>
+                      <option value="self">VOCÊ MESMO</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Status da tarefa (caso seja alteração de status) */}
+                {testAction === "status_change" && (
+                  <div>
+                    <label className="block text-[10px] uppercase text-terminal-green/75 font-mono mb-1">
+                      Novo Status
+                    </label>
+                    <select
+                      value={testTaskStatus}
+                      onChange={(e) => setTestTaskStatus(e.target.value)}
+                      className="w-full px-2 py-1.5 border border-terminal-green bg-black text-terminal-green text-xs font-mono select-custom uppercase font-bold"
+                    >
+                      <option value="todo">PENDENTE (TODO)</option>
+                      <option value="done">CONCLUÍDO (DONE)</option>
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
 

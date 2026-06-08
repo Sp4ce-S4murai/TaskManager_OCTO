@@ -53,23 +53,16 @@ export async function notifyTaskEvent(
   action: "create" | "update" | "delete" | "status_change",
   task: any,
   actorUserId: string
-): Promise<void> {
+): Promise<boolean> {
   // 1. Identify the assigned user
   const assigneeId = task.assignedTo || task.user;
   if (!assigneeId) {
     console.log(`[Notification] Evento ignorado: Tarefa "${task.title}" não possui usuário atribuído.`);
-    return;
+    return false;
   }
 
   // 2. Rules regarding the actor vs assignee
   const isActorAssignee = actorUserId === assigneeId;
-
-  // For updates/deletes/creates by the assignee themselves, we do NOT notify.
-  // We only notify them if it is a critical status change they performed (for validation).
-  if (isActorAssignee && action !== "status_change") {
-    console.log(`[Notification] Ignorando notificação de evento '${action}': o ator (${actorUserId}) é o próprio dono da tarefa.`);
-    return;
-  }
 
   // 3. Resolve the assignee's profile to check if they have a Telegram Chat ID configured
   let telegramChatId: string | null = null;
@@ -87,7 +80,7 @@ export async function notifyTaskEvent(
 
   if (!telegramChatId) {
     console.log(`[Notification] O destinatário "${assigneeId}" não possui um chat ID do Telegram configurado. Pulando.`);
-    return;
+    return false;
   }
 
   // 4. Format message based on action
@@ -96,18 +89,21 @@ export async function notifyTaskEvent(
 
   switch (action) {
     case "create":
-      messageText = `📅 *Nova tarefa atribuída\\!* \n\n` +
-                    `A tarefa *${taskTitleEscaped}* foi designada a você por outro operador\\.`;
+      messageText = isActorAssignee
+        ? `📅 *Tarefa criada e designada a você\\!* \n\nA tarefa *${taskTitleEscaped}* foi adicionada e designada a si mesmo\\.`
+        : `📅 *Nova tarefa atribuída\\!* \n\nA tarefa *${taskTitleEscaped}* foi designada a você por outro operador\\.`;
       break;
 
     case "update":
-      messageText = `✏️ *Tarefa atualizada\\!* \n\n` +
-                    `As informações da sua tarefa *${taskTitleEscaped}* foram editadas por outro operador\\.`;
+      messageText = isActorAssignee
+        ? `✏️ *Tarefa atualizada por você\\!* \n\nAs informações da sua tarefa *${taskTitleEscaped}* foram editadas por você\\.`
+        : `✏️ *Tarefa atualizada\\!* \n\nAs informações da sua tarefa *${taskTitleEscaped}* foram editadas por outro operador\\.`;
       break;
 
     case "delete":
-      messageText = `🗑️ *Tarefa excluída\\!* \n\n` +
-                    `Sua tarefa *${taskTitleEscaped}* foi removida do mainframe por outro operador\\.`;
+      messageText = isActorAssignee
+        ? `🗑️ *Tarefa excluída por você\\!* \n\nSua tarefa *${taskTitleEscaped}* foi removida do mainframe por você\\.`
+        : `🗑️ *Tarefa excluída\\!* \n\nSua tarefa *${taskTitleEscaped}* foi removida do mainframe por outro operador\\.`;
       break;
 
     case "status_change":
@@ -124,5 +120,5 @@ export async function notifyTaskEvent(
   }
 
   // 5. Send message
-  await sendTelegramMessage(telegramChatId, messageText);
+  return await sendTelegramMessage(telegramChatId, messageText);
 }

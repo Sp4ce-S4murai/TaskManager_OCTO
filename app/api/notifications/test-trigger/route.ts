@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAuth, getRawToken, getUserSettings } from "@/lib/firebase-server";
+import { notifyTaskEvent } from "@/lib/notifications-server";
 
 export async function POST(request: Request) {
   try {
@@ -9,50 +10,81 @@ export async function POST(request: Request) {
 
     // 2. Fetch User Settings from Firestore
     const userSettings = await getUserSettings(uid, token);
-
     const { telegram_chat_id, allow_browser_notifications } = userSettings;
+
+    // 3. Parse options from request body
+    const body = await request.json().catch(() => ({}));
+    const action = body.action || "system"; // 'system' | 'create' | 'update' | 'delete' | 'status_change'
+    const simulateActor = body.simulateActor || "other"; // 'self' | 'other'
+    const taskStatus = body.taskStatus || "todo"; // 'todo' | 'done'
 
     let telegramSent = false;
     let telegramError: string | null = null;
 
-    // 3. Send Telegram test notification if chat ID is configured
-    if (telegram_chat_id) {
-      const botToken = process.env.TELEGRAM_BOT_TOKEN;
-      if (!botToken) {
-        telegramError = "TELEGRAM_BOT_TOKEN não está configurado no arquivo .env.local do servidor.";
-      } else {
-        // Escaped message text according to Telegram MarkdownV2 requirements
-        const testMessage =
-          "🚨 *ALERTA DE SISTEMA: TASKMANAGER\\_OCTO* 🚨\n\n" +
-          "Olá\\! Este é um teste oficial de notificação do seu terminal de produtividade\\.\n\n" +
-          "*A procrastinação destrói sua produtividade\\!*\n" +
-          "Não adie suas obrigações\\. Complete suas tarefas a tempo\\! Foco total\\.";
+    if (action === "system") {
+      // Send Telegram test notification if chat ID is configured
+      if (telegram_chat_id) {
+        const botToken = process.env.TELEGRAM_BOT_TOKEN;
+        if (!botToken) {
+          telegramError = "TELEGRAM_BOT_TOKEN não está configurado no arquivo .env.local do servidor.";
+        } else {
+          // Escaped message text according to Telegram MarkdownV2 requirements
+          const testMessage =
+            "🚨 *ALERTA DE SISTEMA: TASKMANAGER\\_OCTO* 🚨\n\n" +
+            "Olá\\! Este é um teste oficial de notificação do seu terminal de produtividade\\.\n\n" +
+            "*A procrastinação destrói sua produtividade\\!*\n" +
+            "Não adie suas obrigações\\. Complete suas tarefas a tempo\\! Foco total\\.";
 
-        try {
-          const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              chat_id: telegram_chat_id,
-              text: testMessage,
-              parse_mode: "MarkdownV2",
-            }),
-          });
+          try {
+            const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                chat_id: telegram_chat_id,
+                text: testMessage,
+                parse_mode: "MarkdownV2",
+              }),
+            });
 
-          const resData = await response.json();
-          if (response.ok && resData.ok) {
-            telegramSent = true;
-          } else {
-            telegramError = resData.description || "Erro desconhecido retornado pela API do Telegram.";
+            const resData = await response.json();
+            if (response.ok && resData.ok) {
+              telegramSent = true;
+            } else {
+              telegramError = resData.description || "Erro desconhecido retornado pela API do Telegram.";
+            }
+          } catch (err: any) {
+            telegramError = err.message || "Erro de conexão ao enviar requisição para o Telegram.";
           }
-        } catch (err: any) {
-          telegramError = err.message || "Erro de conexão ao enviar requisição para o Telegram.";
         }
+      } else {
+        telegramError = "Nenhum ID de Chat do Telegram configurado no perfil.";
       }
     } else {
-      telegramError = "Nenhum ID de Chat do Telegram configurado no perfil.";
+      // Simulate task event notification
+      if (telegram_chat_id) {
+        const mockTask = {
+          title: "Tarefa de Teste OCTO",
+          status: taskStatus,
+          assignedTo: uid,
+          user: uid,
+        };
+        const actorUserId = simulateActor === "self" ? uid : "another-operator-123";
+
+        try {
+          const sent = await notifyTaskEvent(action, mockTask, actorUserId);
+          if (sent) {
+            telegramSent = true;
+          } else {
+            telegramError = "Falha ao enviar notificação ou evento ignorado pelo servidor.";
+          }
+        } catch (err: any) {
+          telegramError = err.message || "Erro durante processamento da notificação reativa.";
+        }
+      } else {
+        telegramError = "Nenhum ID de Chat do Telegram configurado no perfil.";
+      }
     }
 
     // 4. Return response
@@ -65,11 +97,13 @@ export async function POST(request: Request) {
       },
       browserNotification: {
         shouldTrigger: allow_browser_notifications,
-        title: "🚨 OCTO: Alerta de Teste",
+        title: action === "system" ? "🚨 OCTO: Alerta de Teste" : `🚨 OCTO: Evento ${action.toUpperCase()}`,
         options: {
-          body: "A procrastinação é sua maior inimiga. Foco total e mãos à obra!",
-          icon: "/avatars/avatar_oracle_1779380039328.png", // Fallback to oracle avatar or default icon if available
-          tag: "octo-test-notification",
+          body: action === "system"
+            ? "A procrastinação é sua maior inimiga. Foco total e mãos à obra!"
+            : `Simulação de notificação: Tarefa de Teste OCTO (${taskStatus.toUpperCase()})`,
+          icon: "/avatars/avatar_oracle_1779380039328.png",
+          tag: `octo-${action}-notification`,
           requireInteraction: true,
         },
       },
