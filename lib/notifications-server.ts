@@ -45,6 +45,15 @@ export async function sendTelegramMessage(chatId: string, text: string): Promise
   }
 }
 
+function formatDateDisplay(dueDateStr: string): string {
+  if (!dueDateStr) return "Sem prazo";
+  const parts = dueDateStr.split("-");
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return dueDateStr;
+}
+
 /**
  * Evaluates a task mutation event, identifies the impacted assignee,
  * and triggers a Telegram notification when appropriate.
@@ -64,18 +73,32 @@ export async function notifyTaskEvent(
   // 2. Rules regarding the actor vs assignee
   const isActorAssignee = actorUserId === assigneeId;
 
-  // 3. Resolve the assignee's profile to check if they have a Telegram Chat ID configured
+  // 3. Resolve assignee and actor profiles
   let telegramChatId: string | null = null;
+  let assigneeName = "Desconhecido";
+  let actorName = "Desconhecido";
+
   try {
     const docSnap = await getAdminDb().collection("users").doc(assigneeId).get();
     if (docSnap.exists) {
       const profile = docSnap.data();
       telegramChatId = profile?.telegram_chat_id ?? null;
+      assigneeName = profile?.name || profile?.email || assigneeId;
     } else {
       console.warn(`[Notification] Usuário atribuído "${assigneeId}" não possui documento de configurações.`);
     }
   } catch (err: any) {
     console.error(`[Notification] Erro ao carregar configurações do usuário atribuído (${assigneeId}):`, err.message);
+  }
+
+  try {
+    const actorSnap = await getAdminDb().collection("users").doc(actorUserId).get();
+    if (actorSnap.exists) {
+      const profile = actorSnap.data();
+      actorName = profile?.name || profile?.email || actorUserId;
+    }
+  } catch (err: any) {
+    console.error(`[Notification] Erro ao carregar perfil do ator (${actorUserId}):`, err.message);
   }
 
   if (!telegramChatId) {
@@ -85,59 +108,53 @@ export async function notifyTaskEvent(
 
   // 4. Format message based on action
   const cleanTitle = (task.title || "").replace(/\`/g, "'");
-  const sourceStr = isActorAssignee ? "NÚCLEO INDIVIDUAL" : "OPERADOR EXTERNO";
-  let messageText = "";
+  const cleanDesc = (task.description || "Nenhuma descrição fornecida.").replace(/\`/g, "'");
+  const actorStr = isActorAssignee ? "Você mesmo" : actorName;
+  const assigneeStr = isActorAssignee ? "Você mesmo" : assigneeName;
+  
+  const priorityMap: Record<string, string> = { low: "Baixa", medium: "Média", high: "Alta" };
+  const priorityStr = priorityMap[task.priority] || "Média";
+
+  const dueDateStr = task.dueDate ? formatDateDisplay(task.dueDate) : "Sem prazo definido";
+
+  let checklistStr = "";
+  if (task.checklist && task.checklist.length > 0) {
+    checklistStr = "\n  CHECKLIST:\n";
+    for (const item of task.checklist) {
+      checklistStr += `  ${item.isDone ? "[x]" : "[ ]"} ${item.text.replace(/\`/g, "'")}\n`;
+    }
+  }
+
+  let actionStr = "";
+  let statusStr = task.status === "done" ? "CONCLUÍDO (DONE) ●" : "PENDENTE (TODO) ○";
 
   switch (action) {
     case "create":
-      messageText = "```\n" +
-                    "⬡───[ CÓDICE: NOVO VETOR ]───⬡\n" +
-                    "  EVENTO: TAREFA INVOCADA\n" +
-                    `  ALVO: ${cleanTitle}\n` +
-                    `  FONTE: ${sourceStr}\n` +
-                    "  DIRETRIZ: Executar sem deriva.\n" +
-                    "  STATUS: PENDENTE (TODO) ○\n" +
-                    "⬡───────────────────────────⬡\n" +
-                    "```";
+      actionStr = "CRIADA / ATRIBUÍDA";
       break;
-
     case "update":
-      messageText = "```\n" +
-                    "⬡───[ CÓDICE: FLUXO REFORMADO ]───⬡\n" +
-                    "  EVENTO: TAREFA ALTERADA\n" +
-                    `  ALVO: ${cleanTitle}\n` +
-                    `  FONTE: ${sourceStr}\n` +
-                    "  DIRETRIZ: O destino foi reescrito.\n" +
-                    "⬡─────────────────────────────────⬡\n" +
-                    "```";
+      actionStr = "DADOS ATUALIZADOS";
       break;
-
     case "delete":
-      messageText = "```\n" +
-                    "⬡───[ CÓDICE: PURGA DE ENTIDADE ]───⬡\n" +
-                    "  EVENTO: TAREFA EXPULSADA\n" +
-                    `  ALVO: ${cleanTitle}\n` +
-                    `  FONTE: ${sourceStr}\n` +
-                    "  DIRETRIZ: Removida do mainframe ativo.\n" +
-                    "  STATUS: PURGADA █\n" +
-                    "⬡─────────────────────────────────⬡\n" +
-                    "```";
+      actionStr = "EXCLUÍDA (DELETED)";
+      statusStr = "REMOVIDA";
       break;
-
     case "status_change":
-      const isDone = task.status === "done";
-      const statusStr = isDone ? "CONCLUÍDO (DONE) ●" : "PENDENTE (TODO) ○";
-      messageText = "```\n" +
-                    "⬡───[ CÓDICE: MUTAÇÃO DE ESTADO ]───⬡\n" +
-                    "  EVENTO: ALTERAÇÃO DE STATUS\n" +
-                    `  ALVO: ${cleanTitle}\n` +
-                    `  FONTE: ${sourceStr}\n` +
-                    `  ESTADO: ${statusStr}\n` +
-                    `  DIRETRIZ: Entropia recalibrada.\n` +
-                    "⬡─────────────────────────────────⬡\n" +
-                    "```";
+      actionStr = "ALTERAÇÃO DE STATUS";
       break;
   }
+
+  const messageText = "```\n" +
+                      `⬡───[ TAREFA: ${actionStr} ]───⬡\n` +
+                      `  EXECUTOR: ${actorStr}\n` +
+                      `  TÍTULO: ${cleanTitle}\n` +
+                      `  DESCRIÇÃO: ${cleanDesc}\n` +
+                      `  PRIORIDADE: ${priorityStr}\n` +
+                      `  STATUS: ${statusStr}\n` +
+                      `  DESIGNAÇÃO: ${assigneeStr}\n` +
+                      `  PRAZO: ${dueDateStr}${checklistStr}` +
+                      "⬡───────────────────────────────────⬡\n" +
+                      "```";
 
   // 5. Send message
   return await sendTelegramMessage(telegramChatId, messageText);
