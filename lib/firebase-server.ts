@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import type { UserProfile } from "@/lib/types";
 
 const FIREBASE_API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
@@ -160,7 +161,6 @@ export async function getBackendFirestoreToken(): Promise<string | null> {
 
   if (clientEmail && privateKey) {
     try {
-      const crypto = await import("crypto");
       const header = { alg: "RS256", typ: "JWT" };
       const now = Math.floor(Date.now() / 1000);
       const claim = {
@@ -241,7 +241,7 @@ export function toFirestoreFields(obj: Record<string, any>): Record<string, any>
     } else if (typeof val === "string") {
       fields[key] = { stringValue: val };
     } else if (Array.isArray(val)) {
-      fields[key] = {
+      fields[key] = val.length > 0 ? {
         arrayValue: {
           values: val.map(v => {
             if (typeof v === "object" && v !== null) {
@@ -253,6 +253,8 @@ export function toFirestoreFields(obj: Record<string, any>): Record<string, any>
             return { nullValue: null };
           })
         }
+      } : {
+        arrayValue: {}
       };
     } else if (typeof val === "object") {
       if (val instanceof Date) {

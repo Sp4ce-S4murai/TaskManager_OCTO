@@ -21,7 +21,10 @@ export async function PUT(
     // 3. Obtain administrative token for Firestore REST queries
     const serverToken = await getBackendFirestoreToken();
     if (!serverToken) {
-      return NextResponse.json({ error: "Erro de autenticação interna com o banco de dados." }, { status: 500 });
+      return NextResponse.json(
+        { error: "Erro de autenticação: Credenciais administrativas do Firestore não configuradas no Vercel (verifique as variáveis de ambiente FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY ou CRON_SYSTEM_EMAIL/CRON_SYSTEM_PASSWORD no dashboard da Vercel)." },
+        { status: 500 }
+      );
     }
 
     // 4. Fetch the existing task to verify details and compare changes
@@ -71,9 +74,13 @@ export async function PUT(
     });
   } catch (error: any) {
     console.error(`Erro em PUT /api/tasks/${params.id}:`, error);
+    const isAuthError =
+      error.message?.includes("Token") ||
+      error.message?.includes("Authorization") ||
+      error.message?.includes("Cabeçalho");
     return NextResponse.json(
       { error: error.message || "Erro interno do servidor." },
-      { status: error.message?.includes("Token") ? 401 : 500 }
+      { status: isAuthError ? 401 : 500 }
     );
   }
 }
@@ -94,7 +101,10 @@ export async function DELETE(
     // 2. Obtain administrative token
     const serverToken = await getBackendFirestoreToken();
     if (!serverToken) {
-      return NextResponse.json({ error: "Erro de autenticação interna com o banco de dados." }, { status: 500 });
+      return NextResponse.json(
+        { error: "Erro de autenticação: Credenciais administrativas do Firestore não configuradas no Vercel (verifique as variáveis de ambiente FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY ou CRON_SYSTEM_EMAIL/CRON_SYSTEM_PASSWORD no dashboard da Vercel)." },
+        { status: 500 }
+      );
     }
 
     // 3. Fetch task details before deletion (needed to extract title and assignee for notification)
@@ -115,9 +125,13 @@ export async function DELETE(
     });
   } catch (error: any) {
     console.error(`Erro em DELETE /api/tasks/${params.id}:`, error);
+    const isAuthError =
+      error.message?.includes("Token") ||
+      error.message?.includes("Authorization") ||
+      error.message?.includes("Cabeçalho");
     return NextResponse.json(
       { error: error.message || "Erro interno do servidor." },
-      { status: error.message?.includes("Token") ? 401 : 500 }
+      { status: isAuthError ? 401 : 500 }
     );
   }
 }
