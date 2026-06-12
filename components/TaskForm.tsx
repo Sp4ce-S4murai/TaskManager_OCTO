@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { User } from "firebase/auth";
 import { Send } from "lucide-react";
 import type { TaskPrivacy, UserProfile } from "@/lib/types";
@@ -12,6 +13,8 @@ export default function TaskForm({
   user: User;
   userProfiles?: Record<string, UserProfile>;
 }) {
+  const router = useRouter();
+  const [showSuccess, setShowSuccess] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [checklistInput, setChecklistInput] = useState("");
@@ -88,6 +91,7 @@ export default function TaskForm({
       setDueDate("");
       setPrivacy("corporate");
       setPriority("medium");
+      setShowSuccess(true);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Falha ao criar tarefa.");
     } finally {
@@ -219,6 +223,47 @@ export default function TaskForm({
       </div>
 
       {error ? <p className="mt-3 border border-terminal-red text-terminal-red p-3 text-xs font-mono uppercase font-bold bg-black">erro na tarefa: {error}</p> : null}
+
+      {showSuccess && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-sm z-[200] flex flex-col items-center justify-center font-mono select-none p-4">
+          <div 
+            className="border bg-black p-8 max-w-md w-full text-center relative shadow-[0_0_30px_rgba(0,255,65,0.15)] flex flex-col items-center"
+            style={{ borderColor: "#00FF41" }}
+          >
+            {/* Scanline overlay */}
+            <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[size:100%_4px] z-30" />
+            
+            <div className="mb-4 text-5xl text-terminal-green">
+              ⚡
+            </div>
+            
+            <h2 className="text-xl font-extrabold uppercase tracking-widest text-terminal-green mb-2">
+              [TAREFA ADICIONADA]
+            </h2>
+            
+            <p className="text-xs text-[#00FF41]/75 uppercase tracking-wide mb-8">
+              A DIRETRIZ FOI REGISTRADA COM SUCESSO NO SISTEMA OCTO.
+            </p>
+            
+            <div className="flex flex-col gap-3 w-full">
+              <button
+                type="button"
+                onClick={() => setShowSuccess(false)}
+                className="w-full py-2.5 border border-terminal-green text-terminal-green hover:bg-terminal-green hover:text-black font-bold uppercase transition-colors text-xs"
+              >
+                &gt; ADICIONAR OUTRA TAREFA
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/")}
+                className="w-full py-2.5 border border-terminal-yellow text-terminal-yellow hover:bg-terminal-yellow hover:text-black font-bold uppercase transition-colors text-xs"
+              >
+                &gt; VOLTAR AO PAINEL
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

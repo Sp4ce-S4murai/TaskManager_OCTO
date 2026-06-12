@@ -152,7 +152,10 @@ export default function TaskModal({
 
   return (
     <div
-      onClick={handleBackdropClick}
+      onClick={(e) => {
+        e.stopPropagation();
+        handleBackdropClick(e);
+      }}
       className="fixed inset-0 bg-black/85 backdrop-blur-md z-[100] flex items-center justify-center p-3 md:p-6 overflow-y-auto font-mono select-none"
     >
       {/* CRT Scanline & Grid Effect overlay */}
@@ -161,7 +164,7 @@ export default function TaskModal({
       {/* Dynamic Laser Scanline sweep */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
         <div 
-          className="absolute left-0 right-0 h-[2px] opacity-20 shadow-[0_0_8px_currentColor] animate-scanline"
+          className="absolute left-0 right-0 h-[2px] opacity-20 shadow-[0_0_8px_currentColor]"
           style={{ color: colorHex }}
         />
       </div>
@@ -169,7 +172,7 @@ export default function TaskModal({
       {/* Main modal container */}
       <div
         ref={modalRef}
-        className="relative w-full max-w-5xl bg-black border shadow-[0_0_30px_rgba(0,0,0,0.95)] animate-crt-expand max-h-[92vh] md:max-h-[85vh] flex flex-col overflow-hidden text-left"
+        className="relative w-full max-w-5xl bg-black border shadow-[0_0_30px_rgba(0,0,0,0.95)] max-h-[92vh] md:max-h-[85vh] flex flex-col overflow-hidden text-left"
         style={{
           borderColor: colorHex,
           color: colorHex,
@@ -182,7 +185,7 @@ export default function TaskModal({
           style={{ borderColor: colorHex }}
         >
           <div className="flex items-center gap-2">
-            <Terminal className="h-4 w-4 animate-pulse" />
+            <Terminal className="h-4 w-4" />
             <span>[DIRETRIZ_DECIFRADA_v1.3] // ID #{String(index).padStart(2, "0")}</span>
           </div>
           <button
@@ -207,7 +210,7 @@ export default function TaskModal({
         </header>
 
         {/* Scrollable Layout grid */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 grid grid-cols-1 md:grid-cols-12 gap-6 bg-black/90 animate-crt-flicker select-text">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 grid grid-cols-1 md:grid-cols-12 gap-6 bg-black/90 select-text">
           
           {/* LEFT SECTION (Col Span 7 on Desktop): Task details & checklist */}
           <div className="md:col-span-7 space-y-6 flex flex-col">

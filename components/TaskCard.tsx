@@ -277,7 +277,7 @@ export default function TaskCard({
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     hoverTimeoutRef.current = setTimeout(() => {
       setHoverState("resting");
-    }, 350);
+    }, 150);
   };
 
   const handleMouseLeave = () => {
