@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import type { User } from "firebase/auth";
 import { CheckSquare, Square, Trash2, UserPlus, UserMinus } from "lucide-react";
 import CommentSection from "@/components/CommentSection";
 import CardAnimations from "@/components/CardAnimations";
+import TaskModal from "@/components/TaskModal";
 import type { Task, UserProfile } from "@/lib/types";
 
 // Color definitions using inline styles so Tailwind purge is irrelevant
@@ -111,35 +113,54 @@ export default function TaskCard({
   const color = getColor(task.cardColor);
   const colorHex = isDone ? "#333333" : color.hex;
 
+  // Interactive UI states
+  const [mounted, setMounted] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isClicking, setIsClicking] = useState(false);
+  const [hoverState, setHoverState] = useState<"idle" | "glitch" | "resting">("idle");
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => {
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    };
+  }, []);
+
   const [newChecklistItem, setNewChecklistItem] = useState("");
 
-  const handleInlineAddChecklistItem = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newChecklistItem.trim()) return;
+  const addChecklistItem = async (text: string) => {
+    if (!text.trim()) return;
 
     const newItem = {
       id: Math.random().toString(36).substring(2, 11),
-      text: newChecklistItem.trim(),
+      text: text.trim(),
       isDone: false,
     };
 
     const newChecklist = [...(task.checklist || []), newItem];
 
+    const idToken = await user.getIdToken();
+    const response = await fetch(`/api/tasks/${task.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${idToken}`,
+      },
+      body: JSON.stringify({ checklist: newChecklist }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Falha ao adicionar item ao checklist.");
+    }
+  };
+
+  const handleInlineAddChecklistItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newChecklistItem.trim()) return;
+
     try {
-      const idToken = await user.getIdToken();
-      const response = await fetch(`/api/tasks/${task.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({ checklist: newChecklist }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Falha ao adicionar item ao checklist.");
-      }
-
+      await addChecklistItem(newChecklistItem);
       setNewChecklistItem("");
     } catch (err) {
       console.error(err);
@@ -240,14 +261,65 @@ export default function TaskCard({
     }
   };
 
+  const isGlitch = hoverState === "glitch";
+  const isResting = hoverState === "resting";
+
+  const handleCardClick = () => {
+    setIsClicking(true);
+    setTimeout(() => {
+      setIsClicking(false);
+      setIsModalOpen(true);
+    }, 150);
+  };
+
+  const handleMouseEnter = () => {
+    setHoverState("glitch");
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoverState("resting");
+    }, 350);
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    setHoverState("idle");
+  };
+
   return (
     <article
-      className="relative overflow-hidden bg-[#000000] transition-shadow"
+      onClick={handleCardClick}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className={`relative overflow-hidden bg-[#000000] cursor-pointer ${
+        isGlitch ? "card-glitch-effect" : ""
+      } ${
+        isResting ? "card-resting-effect" : ""
+      }`}
       style={{
         border: `1px solid ${colorHex}`,
-        boxShadow: `0 0 12px ${colorHex}22`,
+        boxShadow: isResting ? `0 0 22px ${colorHex}` : `0 0 12px ${colorHex}22`,
+        transform: isResting ? "translateY(-6px) scale(1.025)" : isClicking ? "scale(0.97)" : "none",
+        transition: "transform 0.22s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.22s cubic-bezier(0.25, 0.8, 0.25, 1), border-color 0.22s ease",
       }}
     >
+      {/* Laser scanline sweep when resting */}
+      {isResting && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden z-25">
+          <div 
+            className="absolute left-0 right-0 h-[2px] opacity-40 shadow-[0_0_8px_currentColor] animate-scanline"
+            style={{ color: colorHex }}
+          />
+        </div>
+      )}
+
+      {/* Click flash screen overlay */}
+      {isClicking && (
+        <div 
+          className="absolute inset-0 bg-current opacity-30 z-30 pointer-events-none transition-opacity duration-150"
+          style={{ color: colorHex }}
+        />
+      )}
+
       {/* Background animation — rendered below everything */}
       <CardAnimations type={authorAnimation} />
 
@@ -279,6 +351,7 @@ export default function TaskCard({
                 <Link
                   href={`/perfil/${task.authorUid}`}
                   className="hover:underline hover:text-white transition-colors"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   {task.authorEmail}
                 </Link>
@@ -329,6 +402,7 @@ export default function TaskCard({
                       <Link
                         href={`/perfil/${uid}`}
                         className="hover:underline hover:text-white transition-colors font-bold"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         {displayName}
                       </Link>
@@ -344,7 +418,7 @@ export default function TaskCard({
             {user.uid !== task.authorUid && (
               <button
                 type="button"
-                onClick={() => void toggleAffiliation()}
+                onClick={(e) => { e.stopPropagation(); void toggleAffiliation(); }}
                 className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs uppercase border font-bold transition-colors"
                 style={{
                   borderColor: isAffiliated ? "#FFFF00" : colorHex,
@@ -369,7 +443,7 @@ export default function TaskCard({
             {/* Status toggle */}
             <button
               type="button"
-              onClick={() => void toggleStatus()}
+              onClick={(e) => { e.stopPropagation(); void toggleStatus(); }}
               className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs uppercase border font-bold transition-colors hover:bg-opacity-90"
               style={{
                 borderColor: colorHex,
@@ -391,7 +465,7 @@ export default function TaskCard({
             {/* Delete */}
             <button
               type="button"
-              onClick={() => void handleDelete()}
+              onClick={(e) => { e.stopPropagation(); void handleDelete(); }}
               aria-label={`Deletar tarefa ${task.title}`}
               className="inline-flex items-center justify-center px-2.5 py-1.5 text-xs uppercase border border-[#FF003C] text-[#FF003C] hover:bg-[#FF003C] hover:text-black transition-colors"
             >
@@ -454,7 +528,7 @@ export default function TaskCard({
             <div key={item.id} className="flex items-start gap-2">
               <button
                 type="button"
-                onClick={() => void toggleChecklistItem(itemIndex)}
+                onClick={(e) => { e.stopPropagation(); void toggleChecklistItem(itemIndex); }}
                 className="mt-0.5 shrink-0 transition-colors"
                 style={{ color: item.isDone ? "#00FF41" : "#FFFF00" }}
               >
@@ -473,7 +547,7 @@ export default function TaskCard({
           ))}
 
           {/* Add Item Form */}
-          <form onSubmit={handleInlineAddChecklistItem} className="mt-3 flex gap-2">
+          <form onSubmit={handleInlineAddChecklistItem} className="mt-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
             <input
               type="text"
               placeholder="Nova subtarefa..."
@@ -506,9 +580,29 @@ export default function TaskCard({
       </div>
 
       {/* Comment section */}
-      <div className="relative z-10 bg-black/80">
+      <div className="relative z-10 bg-black/80" onClick={(e) => e.stopPropagation()}>
         <CommentSection taskId={task.id} user={user} />
       </div>
+
+      {/* Portal-rendered Cyberpunk Modal */}
+      {mounted && isModalOpen && createPortal(
+        <TaskModal
+          task={task}
+          user={user}
+          index={index}
+          userProfiles={userProfiles}
+          colorHex={colorHex}
+          onClose={() => setIsModalOpen(false)}
+          isAffiliated={isAffiliated}
+          isDone={isDone}
+          toggleStatus={toggleStatus}
+          toggleAffiliation={toggleAffiliation}
+          handleDelete={handleDelete}
+          toggleChecklistItem={toggleChecklistItem}
+          addChecklistItem={addChecklistItem}
+        />,
+        document.body
+      )}
     </article>
   );
 }

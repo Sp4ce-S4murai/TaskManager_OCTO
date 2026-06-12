@@ -97,3 +97,96 @@ button:disabled {
 a {
   color: inherit;
 }
+
+/* Cyberpunk Keyframes & Utility Classes */
+@keyframes glitch-shadow-effect {
+  0% {
+    text-shadow: 2px -1.5px 0 #FF003C, -2px 1.5px 0 #00FFFF;
+    box-shadow: 2px 0 0 #FF003C, -2px 0 0 #00FFFF, 0 0 12px rgba(0, 255, 65, 0.15);
+    transform: translate(1px, -1px);
+  }
+  20% {
+    text-shadow: -1.5px 2px 0 #FF003C, 1.5px -2px 0 #00FFFF;
+    box-shadow: -1.5px 0 0 #FF003C, 1.5px 0 0 #00FFFF, 0 0 12px rgba(0, 255, 65, 0.15);
+    transform: translate(-1px, 1px);
+  }
+  40% {
+    text-shadow: 2px 2px 0 #FF003C, -2px -2px 0 #00FFFF;
+    box-shadow: 2.5px 0 0 #FF003C, -2.5px 0 0 #00FFFF, 0 0 12px rgba(0, 255, 65, 0.15);
+    transform: translate(0.5px, 0.5px);
+  }
+  60% {
+    text-shadow: -2px -1.5px 0 #FF003C, 2px 1.5px 0 #00FFFF;
+    box-shadow: -2px 0 0 #FF003C, 2px 0 0 #00FFFF, 0 0 12px rgba(0, 255, 65, 0.15);
+    transform: translate(-0.5px, -0.5px);
+  }
+  80% {
+    text-shadow: 1.5px -2px 0 #FF003C, -1.5px 2px 0 #00FFFF;
+    box-shadow: 1.5px 0 0 #FF003C, -1.5px 0 0 #00FFFF, 0 0 12px rgba(0, 255, 65, 0.15);
+    transform: translate(-1px, -0.5px);
+  }
+  100% {
+    text-shadow: 2px -1.5px 0 #FF003C, -2px 1.5px 0 #00FFFF;
+    box-shadow: 2px 0 0 #FF003C, -2px 0 0 #00FFFF, 0 0 12px rgba(0, 255, 65, 0.15);
+    transform: translate(1px, -1px);
+  }
+}
+
+@keyframes crt-expand {
+  0% {
+    transform: scaleX(0.01) scaleY(0.002);
+    opacity: 0.8;
+  }
+  40% {
+    transform: scaleX(1) scaleY(0.002);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(1) scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes laser-sweep {
+  0% {
+    top: -5%;
+  }
+  100% {
+    top: 105%;
+  }
+}
+
+@keyframes crt-flicker {
+  0% { opacity: 0.92; }
+  10% { opacity: 0.95; }
+  15% { opacity: 0.92; }
+  25% { opacity: 1; }
+  50% { opacity: 0.95; }
+  65% { opacity: 0.92; }
+  80% { opacity: 1; }
+  90% { opacity: 0.98; }
+  100% { opacity: 1; }
+}
+
+/* Custom CSS Classes */
+.card-glitch-effect {
+  animation: glitch-shadow-effect 0.15s steps(2, start) infinite;
+}
+
+.card-resting-effect {
+  transform: translateY(-6px) scale(1.025);
+  transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.animate-crt-expand {
+  animation: crt-expand 0.45s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+  transform-origin: center;
+}
+
+.animate-crt-flicker {
+  animation: crt-flicker 0.18s infinite;
+}
+
+.animate-scanline {
+  animation: laser-sweep 2.2s linear infinite;
+}
